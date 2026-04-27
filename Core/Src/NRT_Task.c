@@ -9,9 +9,9 @@
 #include "FreeRTOS.h"
 #include "Task.h"
 #include "L6470_Driver.h"
-#include <stdlib.h> // Necesario para la función atof() que convierte texto a decimal
-#include <string.h> // Necesario para limpiar el buffer (memset)
-#include <stdio.h>  // <-- AÑADE ESTA LÍNEA para el sscanf
+#include <stdlib.h> // Para conversiones de datos y gestión de tipos estándar
+#include <string.h> // Para memset(): vital para limpiar el buffer UART y evitar basura en los comandos
+#include <stdio.h>  // Para sscanf(): permite desempaquetar la trama V,A,G recibida del PC
 
 // Importamos el puerto serie (UART1) que ya está inicializado en usart.c o main.c
 extern UART_HandleTypeDef huart1;
