@@ -11,6 +11,7 @@
 #include "L6470_Driver.h"
 #include <stdlib.h> // Necesario para la función atof() que convierte texto a decimal
 #include <string.h> // Necesario para limpiar el buffer (memset)
+#include <stdio.h>  // <-- AÑADE ESTA LÍNEA para el sscanf
 
 // Importamos el puerto serie (UART1) que ya está inicializado en usart.c o main.c
 extern UART_HandleTypeDef huart1;
@@ -88,38 +89,48 @@ void NRT_Task(void * parg){
 	wait_while_busy();
 
 	// --- 2. PREPARACIÓN PARA RECIBIR COMANDOS POR SERIAL ---
-	char rx_buffer[10]; // Guardará el texto (ej: "-45.5")
-	memset(rx_buffer, 0, sizeof(rx_buffer));
-	uint8_t rx_index = 0;
-	uint8_t rx_data = 0; // Guardará la letra que va llegando
+	// --- 2. PREPARACIÓN PARA RECIBIR COMANDOS POR SERIAL ---
+		char rx_buffer[64];
+		memset(rx_buffer, 0, sizeof(rx_buffer));
+		uint8_t rx_index = 0;
+		uint8_t rx_data = 0;
 
-	// --- 3. BUCLE DE ESPERA DE ÓRDENES ---
-	while(1){
-		// Leemos el puerto serie (espera máxima 10ms por vuelta)
-		if (HAL_UART_Receive(&huart1, &rx_data, 1, 10) == HAL_OK) {
+		// --- 3. BUCLE DE ESPERA DE ÓRDENES ---
+		while(1){
+			// Leemos el puerto serie (espera máxima 10ms por vuelta)
+			if (HAL_UART_Receive(&huart1, &rx_data, 1, 10) == HAL_OK) {
 
-			// Si el usuario pulsa 'Enter' (salto de línea)
-			if (rx_data == '\n' || rx_data == '\r') {
-				if (rx_index > 0) { // Si hay algo escrito en el buffer
-					// 1. Convertir texto a número decimal
-					float angulo_deseado = atof(rx_buffer);
+				// Si el usuario pulsa 'Enter' (salto de línea)
+				if (rx_data == '\n' || rx_data == '\r') {
+					if (rx_index > 0) {
 
-					// 2. Mover la plataforma
-					move_to_ang(angulo_deseado);
+						float vel = 0.0f, acc = 0.0f, angulo = 0.0f;
 
-					// 3. Limpiar buffer para la próxima orden
-					memset(rx_buffer, 0, sizeof(rx_buffer));
-					rx_index = 0;
+						// Desmenuzamos el texto: V:vel,A:acc,G:angulo
+						if (sscanf(rx_buffer, "V:%f,A:%f,G:%f", &vel, &acc, &angulo) == 3) {
+
+							// 1. Actualizamos los parámetros del motor "al vuelo"
+							dSPIN_Set_Param(dSPIN_MAX_SPEED, MaxSpd_Steps_to_Par(vel));
+							dSPIN_Set_Param(dSPIN_ACC, AccDec_Steps_to_Par(acc));
+							dSPIN_Set_Param(dSPIN_DEC, AccDec_Steps_to_Par(acc));
+
+							// 2. Mover la plataforma
+							move_to_ang(angulo);
+						}
+
+						// 3. Limpiar buffer para la próxima orden
+						memset(rx_buffer, 0, sizeof(rx_buffer));
+						rx_index = 0;
+					}
 				}
+				// Si no es un salto de línea, seguimos guardando caracteres
+				else if (rx_index < 63) { // <-- AUMENTADO el límite a 63
+					rx_buffer[rx_index] = (char)rx_data;
+					rx_index++;
+				}
+			} else {
+				// Si no ha llegado nada por serial, cedemos el control a FreeRTOS
+				vTaskDelay(10);
 			}
-			// Si es un número o un signo menos, lo almacenamos
-			else if (rx_index < 9) {
-				rx_buffer[rx_index] = (char)rx_data;
-				rx_index++;
-			}
-		} else {
-			// Si no ha llegado nada por serial, cedemos el control a FreeRTOS
-			vTaskDelay(10);
 		}
-	}
 }
