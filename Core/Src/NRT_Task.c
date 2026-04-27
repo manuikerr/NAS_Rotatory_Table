@@ -89,7 +89,6 @@ void NRT_Task(void * parg){
 	wait_while_busy();
 
 	// --- 2. PREPARACIÓN PARA RECIBIR COMANDOS POR SERIAL ---
-	// --- 2. PREPARACIÓN PARA RECIBIR COMANDOS POR SERIAL ---
 		char rx_buffer[64];
 		memset(rx_buffer, 0, sizeof(rx_buffer));
 		uint8_t rx_index = 0;
