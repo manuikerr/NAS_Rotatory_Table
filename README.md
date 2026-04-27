@@ -36,12 +36,12 @@ Este apartado detalla la transición desde la plantilla base proporcionada por e
 Se ha mantenido la arquitectura profesional original, que proporciona la estabilidad necesaria para el tiempo real:
 
 * **Arquitectura de Tiempo Real:** Configuración de **FreeRTOS** y creación de la tarea `NRT_Task` para el control del motor.
-* **Comunicación SPI de Alta Eficiencia:** * Implementación de **Semáforos Binarios** (`spiSem`) para evitar el bloqueo del procesador.
+* **Comunicación SPI de Alta Eficiencia:** Implementación de **Semáforos Binarios** (`spiSem`) para evitar el bloqueo del procesador.
     * Uso de transferencias por interrupción (`HAL_SPI_TransmitReceive_IT`) en el driver `L6470_Driver.c`.
 * **Cálculo de Resolución:** Definición de la constante `K_ANG` para la conversión de grados a pasos del motor.
 
 
-## 🚀 2. Adiciones y Mejoras Personales del Alumno Interno
+## 🚀 2. Adiciones y Mejoras del Alumno Interno
 He transformado la base secuencial en una herramienta de laboratorio interactiva y automatizada:
 
 ### 📥 Integración de Comunicaciones Dinámicas (`NRT_Task.c`)
