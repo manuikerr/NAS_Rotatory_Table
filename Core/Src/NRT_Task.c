@@ -123,7 +123,7 @@ void NRT_Task(void * parg){
 					}
 				}
 				// Si no es un salto de línea, seguimos guardando caracteres
-				else if (rx_index < 63) { // <-- AUMENTADO el límite a 63
+				else if (rx_index < 63) {
 					rx_buffer[rx_index] = (char)rx_data;
 					rx_index++;
 				}
