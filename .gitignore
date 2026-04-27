@@ -1,0 +1,20 @@
+# Binarios y carpetas de compilación
+Debug/
+Release/
+bin/
+obj/
+
+# Archivos temporales del IDE
+.settings/
+.launches/
+.externalToolBuilders/
+
+# Archivos pesados de salida
+*.elf
+*.bin
+*.map
+*.list
+
+# Otros
+.DS_Store
+Thumbs.db
