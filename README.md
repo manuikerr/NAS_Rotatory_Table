@@ -1,14 +1,14 @@
-\# NAS Rotatory Table
+# NAS Rotatory Table
 
 
 
-Este proyecto implementa un sistema de control de alta precisión para una mesa giratoria utilizada en el entrenamiento y validación de dispositivos auditivos. El sistema utiliza un microcontrolador \*\*STM32L412\*\* y el driver de motor paso a paso \*\*L6470 (dSPIN)\*\*.
+Este proyecto implementa un sistema de control de alta precisión para una mesa giratoria utilizada en el entrenamiento y validación de dispositivos auditivos. El sistema utiliza un microcontrolador \*\*STM32L412\*\* y el driver de motor paso a paso \*\*L6470\*\*.
 
 
 
-\## 🚀 Características
+## 🚀 Características
 
-\- \*\*Control dinámico:\*\* Ajuste de velocidad, aceleración y ángulo "al vuelo" mediante comandos seriales.
+- \*\*Control dinámico:\*\* Ajuste de velocidad, aceleración y ángulo "al vuelo" mediante comandos seriales.
 
 \- \*\*Modo Silencioso:\*\* Configurado a 1/128 micropasos para minimizar vibraciones y ruido acústico.
 
@@ -18,7 +18,7 @@ Este proyecto implementa un sistema de control de alta precisión para una mesa 
 
 
 
-\## 📂 Estructura del Proyecto
+## 📂 Estructura del Proyecto
 
 \- `/Core`: Código fuente del firmware en C.
 
