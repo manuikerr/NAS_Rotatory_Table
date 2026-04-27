@@ -37,9 +37,13 @@ He transformado la base secuencial en una herramienta de laboratorio interactiva
 * **Control "al vuelo" del L6470:** Se añadieron llamadas dinámicas a `dSPIN_Set_Param`, permitiendo que el motor cambie su comportamiento físico (aceleración y velocidad máxima) sin necesidad de reiniciar el firmware.
 * **Gestión de Memoria:** Buffer de recepción de **64 bytes** para soportar instrucciones largas desde el PC.
 
-
 > **💡 Nota Técnica:** Para asegurar que el `sscanf` funcione correctamente en el STM32, se ha habilitado el soporte de **float** en los *Linker Flags* del proyecto (`-u _scanf_float`).
 
+
+### ⚙️ Configuración y Optimización de Hardware (`gpio.c`)
+* **Estado Inicial Seguro:** Se modificó la inicialización de los pines en `gpio.c` para garantizar la estabilidad del sistema desde el arranque:
+    * **Pin NSS en ALTO (`GPIO_PIN_SET`):** A diferencia de la plantilla original, forzamos el pin de selección de esclavo a nivel alto inmediatamente. Esto mantiene al driver **L6470** en estado de reposo, evitando que interprete ruido electrónico o señales espurias como comandos falsos durante la fase de inicio del microcontrolador.
+    * **LEDs en BAJO (`GPIO_PIN_RESET`):** Aseguramos que los indicadores visuales comiencen apagados para una gestión de estados limpia.
 
 
 ### 🐍 Automatización Externa (`script_mesa.py`)
