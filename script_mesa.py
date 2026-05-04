@@ -1,12 +1,13 @@
 import serial
 import time
 import random
+import os
 from datetime import datetime
 
 # --- CONFIGURACIÓN ---
-PUERTO_SERIE = 'COMX' 
+PUERTO_SERIE = 'COMX'
 BAUD_RATE = 9600
-DURACION_HORAS = 0.5 
+DURACION_HORAS = 0.5
 SEGUNDOS_TOTALES = DURACION_HORAS * 3600
 ESPERA_CONSTANTE = 5.0
 
@@ -27,10 +28,11 @@ def enviar_comando_dinamico(conexion, velocidad, aceleracion, angulo, log_file):
 
 def main():
     nombre_log = f"log_entrenamiento_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-    
+    ruta_log = os.path.join("logs", nombre_log)
+
     try:
         with serial.Serial(PUERTO_SERIE, BAUD_RATE) as conexion, open(nombre_log, "w") as log_file: # añadiremos timeout si queremos que el stm32 conteste.
-            print(f"Log guardándose en: {nombre_log}")
+            print(f"Log guardándose en: {ruta_log}")
             log_file.write(f"Inicio de entrenamiento: {datetime.now()}\n\n")
             
             time.sleep(2) # Espera conexión
