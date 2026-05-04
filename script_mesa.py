@@ -31,7 +31,7 @@ def main():
     ruta_log = os.path.join("logs", nombre_log)
 
     try:
-        with serial.Serial(PUERTO_SERIE, BAUD_RATE) as conexion, open(nombre_log, "w") as log_file: # añadiremos timeout si queremos que el stm32 conteste.
+        with serial.Serial(PUERTO_SERIE, BAUD_RATE) as conexion, open(ruta_log, "w") as log_file: # añadiremos timeout si queremos que el stm32 conteste.
             print(f"Log guardándose en: {ruta_log}")
             log_file.write(f"Inicio de entrenamiento: {datetime.now()}\n\n")
             
@@ -54,6 +54,8 @@ def main():
 
     except serial.SerialException as e:
         print(f"Error de puerto serie: {e}")
+    except FileNotFoundError:
+        print(f"Error: La carpeta 'logs' no existe. Por favor, créala antes de ejecutar.")
     except KeyboardInterrupt:
         print("\n[!] Interrumpido. La mesa se queda en su posición actual.")
 
