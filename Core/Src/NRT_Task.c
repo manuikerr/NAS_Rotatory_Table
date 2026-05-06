@@ -5,13 +5,14 @@
  * Author: Angel Jimenez
  */
 
-#include "stm32l412xx.h"
+#include "stm32l4xx_hal.h"
 #include "FreeRTOS.h"
 #include "Task.h"
 #include "L6470_Driver.h"
 #include <stdlib.h> // Para conversiones de datos y gestión de tipos estándar
 #include <string.h> // Para memset(): vital para limpiar el buffer UART y evitar basura en los comandos
 #include <stdio.h>  // Para sscanf(): permite desempaquetar la trama V,A,G recibida del PC
+#include "usbd_cdc_if.h"
 
 // Importamos el puerto serie (UART1) que ya está inicializado en usart.c o main.c
 extern UART_HandleTypeDef huart1;
@@ -75,61 +76,90 @@ void move_to_ang(float ang){
 	wait_while_busy();
 }
 
+
+// TODO: hacer la rutina de homing como un comando para usarlo cuando queramos
+void homing_routine(void){
+	// 1. Aproximación al sensor
+	dSPIN_Go_Until(ACTION_RESET, REV, 15000);
+	wait_while_busy();
+
+	// 2. Liberación suave del sensor
+	dSPIN_Release_SW(ACTION_RESET, FWD);
+	wait_while_busy();
+
+	// 3. Movimiento relativo de 90 grados para separarse
+	uint32_t pasos_offset = (uint32_t)(K_ANG * 90.0f);
+	dSPIN_Move(FWD, pasos_offset);
+	wait_while_busy();
+
+	// 4. Establecemos la posición actual como el Cero Lógico (Home)
+	dSPIN_Reset_Pos();
+}
+
+
+// Variables globales del bridge
+char usb_rx_buffer[64];
+volatile uint8_t usb_rx_flag = 0;
+
+// TODO: comunicacion entre STM32 y script.
 void NRT_Task(void * parg){
 
+	// --- 1. INICIALIZACIÓN ---
 	dSPIN_Init_Sem();
 	Init_NRT();
 	vTaskDelay(100);
 
-	// --- 1. RUTINA DE HOMING (Búsqueda del Cero Inicial) ---
-	dSPIN_Go_Until(dSPIN_ACTION_RESET, dSPIN_DIR_REV, 15000);
-	wait_while_busy();
+	char tx_buffer[64];
 
-	dSPIN_Release_SW(dSPIN_ACTION_RESET, dSPIN_DIR_FWD);
-	wait_while_busy();
+	// --- 2. BUCLE DE ESPERA DE ÓRDENES ---
+	while(1){
 
-	// --- 2. PREPARACIÓN PARA RECIBIR COMANDOS POR SERIAL ---
-		char rx_buffer[64];
-		memset(rx_buffer, 0, sizeof(rx_buffer));
-		uint8_t rx_index = 0;
-		uint8_t rx_data = 0;
+        //TODO: máquina de estados
+		// Flag activa -> ha llegado algo por USB
+		if (usb_rx_flag == 1) {
 
-		// --- 3. BUCLE DE ESPERA DE ÓRDENES ---
-		while(1){
-			// Leemos el puerto serie (espera máxima 10ms por vuelta)
-			if (HAL_UART_Receive(&huart1, &rx_data, 1, 10) == HAL_OK) {
-
-				// Si el usuario pulsa 'Enter' (salto de línea)
-				if (rx_data == '\n' || rx_data == '\r') {
-					if (rx_index > 0) {
-
-						float vel = 0.0f, acc = 0.0f, angulo = 0.0f;
-
-						// Desmenuzamos el texto: V:vel,A:acc,G:angulo
-						if (sscanf(rx_buffer, "V:%f,A:%f,G:%f", &vel, &acc, &angulo) == 3) {
-
-							// 1. Actualizamos los parámetros del motor "al vuelo"
-							dSPIN_Set_Param(dSPIN_MAX_SPEED, MaxSpd_Steps_to_Par(vel));
-							dSPIN_Set_Param(dSPIN_ACC, AccDec_Steps_to_Par(acc));
-							dSPIN_Set_Param(dSPIN_DEC, AccDec_Steps_to_Par(acc));
-
-							// 2. Mover la plataforma
-							move_to_ang(angulo);
-						}
-
-						// 3. Limpiar buffer para la próxima orden
-						memset(rx_buffer, 0, sizeof(rx_buffer));
-						rx_index = 0;
-					}
-				}
-				// Si no es un salto de línea, seguimos guardando caracteres
-				else if (rx_index < 63) {
-					rx_buffer[rx_index] = (char)rx_data;
-					rx_index++;
-				}
-			} else {
-				// Si no ha llegado nada por serial, cedemos el control a FreeRTOS
-				vTaskDelay(10);
+			// 1. ¿comando HOME?
+			if (strncmp(usb_rx_buffer, "HOME", 4) == 0) {
+				homing_routine();
+				snprintf(tx_buffer, sizeof(tx_buffer), "Homing completado\n");
+				CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
 			}
+			// 2. Si no es HOME, es rutina de entrenamiento
+			else {
+				float vel = 0.0f, acc = 0.0f, dec = 0.0, angulo = 0.0f;
+
+				// Desmenuzamos el texto: V:vel,A:acc,D: dec,G:angulo
+				if (sscanf(usb_rx_buffer, "V:%f,A:%f,D:%f,G:%f", &vel, &acc, &dec, &angulo) == 4) {
+					// 1. Imprime en la consola interna del STM32
+					printf("Angulo: %.2f\r\n", angulo);
+
+					// 2. Avisamos a Python de que ha ido bien
+					snprintf(tx_buffer, sizeof(tx_buffer), "Angulo recibido\n");
+					CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
+
+					// 3. Actualizamos los parámetros del motor "al vuelo"
+					dSPIN_Set_Param(dSPIN_MAX_SPEED, MaxSpd_Steps_to_Par(vel));
+					dSPIN_Set_Param(dSPIN_ACC, AccDec_Steps_to_Par(acc));
+					dSPIN_Set_Param(dSPIN_DEC, AccDec_Steps_to_Par(dec));
+
+					// 4. Movemos la plataforma
+					move_to_ang(angulo);
+				}
+				else {
+					// Imprime en la consola interna del STM32 el error
+					printf("Parseo erroneo: %s\r\n", usb_rx_buffer);
+
+					// Avisamos a Python de que ha ido MAL
+					snprintf(tx_buffer, sizeof(tx_buffer), "Parseo erroneo\n");
+					CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
+				}
+			}
+
+			// Flag a 0 para recibir el siguiente mensaje
+			usb_rx_flag = 0;
 		}
+
+		// Si no ha llegado nada por serial, cedemos el control a FreeRTOS
+		vTaskDelay(10);
+	}
 }

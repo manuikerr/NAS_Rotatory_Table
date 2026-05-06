@@ -94,7 +94,7 @@ uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
 uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 
 /* USER CODE BEGIN PRIVATE_VARIABLES */
-uint8_t buffer[7];
+uint8_t buffer[7] = {0x00, 0xC2, 0x01, 0x00, 0x00, 0x00, 0x08};
 /* USER CODE END PRIVATE_VARIABLES */
 
 /**
@@ -265,12 +265,24 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   * @param  Len: Number of data received (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
+
+//TODO: comunicación entre STM y script
+extern char usb_rx_buffer[64];
+extern volatile uint8_t usb_rx_flag;
+
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
-//  CDC_Transmit_FS(Buf, *Len);
+
+  // Copiamos el mensaje del PC a nuestro cajón global y levantamos e
+    if(*Len < 64) {
+        memset(usb_rx_buffer, 0, 64);
+        memcpy(usb_rx_buffer, Buf, *Len);
+        usb_rx_flag = 1;
+    }
+
   return (USBD_OK);
   /* USER CODE END 6 */
 }
