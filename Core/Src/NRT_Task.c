@@ -10,11 +10,10 @@
 #include "Task.h"
 #include "L6470_Driver.h"
 #include <stdlib.h> // Para conversiones de datos y gestión de tipos estándar
-#include <string.h> // Para memset(): vital para limpiar el buffer UART y evitar basura en los comandos
-#include <stdio.h>  // Para sscanf(): permite desempaquetar la trama V,A,G recibida del PC
+#include <stdio.h>  // Para sscanf(): permite desempaquetar la trama V,A,D,G recibida del PC
 #include "usbd_cdc_if.h"
 
-// Importamos el puerto serie (UART1) que ya está inicializado en usart.c o main.c
+// Importamos el puerto serie (UART1)
 extern UART_HandleTypeDef huart1;
 
 // Factor de conversión (Ajusta este valor según la reducción de tu motor)
@@ -64,20 +63,21 @@ void Init_NRT(){
 	dSPIN_Registers_Set(&dSPIN_RegsStruct);
 }
 
+// espera mientras está ocupado
 void wait_while_busy() {
     while(dSPIN_Busy_SW()) {
         vTaskDelay(10);
     }
 }
 
+// moverse a un ángulo (posición absoluta)
 void move_to_ang(float ang){
 	dSPIN_Go_To(K_ANG * ang);
 	vTaskDelay(2);
 	wait_while_busy();
 }
 
-
-// TODO: hacer la rutina de homing como un comando para usarlo cuando queramos
+// rutina de homing
 void homing_routine(void){
 	// 1. Aproximación al sensor
 	dSPIN_Go_Until(ACTION_RESET, REV, 15000);
@@ -96,20 +96,19 @@ void homing_routine(void){
 	dSPIN_Reset_Pos();
 }
 
-// TODO: máquina de estado con switch case
+// estados
 typedef enum {
-    SYS_STATE_IDLE,
-    SYS_STATE_PARSING,
-    SYS_STATE_HOMING,
-    SYS_STATE_MOVING,
-    SYS_STATE_ERROR
+	NRT_STATE_IDLE,
+    NRT_STATE_PARSING,
+    NRT_STATE_HOMING,
+    NRT_STATE_MOVING,
+    NRT_STATE_ERROR
 } NRT_State_t;
 
-// Variables globales del bridge
+// Variables globales del puente
 char usb_rx_buffer[64];
 volatile uint8_t usb_rx_flag = 0;
 
-// TODO: comunicacion entre STM32 y script.
 void NRT_Task(void * parg){
 
 	// --- 1. INICIALIZACIÓN ---
@@ -118,56 +117,81 @@ void NRT_Task(void * parg){
 	vTaskDelay(100);
 
 	char tx_buffer[64];
+	float vel = 0.0f, acc = 0.0f, dec = 0.0f, angulo = 0.0f;
+
+	NRT_State_t current_state = NRT_STATE_IDLE;
 
 	// --- 2. BUCLE DE ESPERA DE ÓRDENES ---
 	while(1){
-
-        //TODO: máquina de estados
-		// Flag activa -> ha llegado algo por USB
-		if (usb_rx_flag == 1) {
-
-			// 1. ¿comando HOME?
-			if (strncmp(usb_rx_buffer, "HOME", 4) == 0) {
-				homing_routine();
-				snprintf(tx_buffer, sizeof(tx_buffer), "Homing completado\n");
-				CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
+		switch(current_state) {
+		case NRT_STATE_IDLE:
+			// Flag USB activa -> parseamos
+			// else -> esperamos
+			if (usb_rx_flag == 1) {
+				current_state = NRT_STATE_PARSING;
+			} else {
+				vTaskDelay(10);
 			}
-			// 2. Si no es HOME, es rutina de entrenamiento
-			else {
-				float vel = 0.0f, acc = 0.0f, dec = 0.0, angulo = 0.0f;
+			break;
 
-				// Desmenuzamos el texto: V:vel,A:acc,D: dec,G:angulo
-				if (sscanf(usb_rx_buffer, "V:%f,A:%f,D:%f,G:%f", &vel, &acc, &dec, &angulo) == 4) {
-					// 1. Imprime en la consola interna del STM32
-					printf("Angulo: %.2f\r\n", angulo);
-
-					// 2. Avisamos a Python de que ha ido bien
-					snprintf(tx_buffer, sizeof(tx_buffer), "Angulo recibido\n");
-					CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
-
-					// 3. Actualizamos los parámetros del motor "al vuelo"
-					dSPIN_Set_Param(dSPIN_MAX_SPEED, MaxSpd_Steps_to_Par(vel));
-					dSPIN_Set_Param(dSPIN_ACC, AccDec_Steps_to_Par(acc));
-					dSPIN_Set_Param(dSPIN_DEC, AccDec_Steps_to_Par(dec));
-
-					// 4. Movemos la plataforma
-					move_to_ang(angulo);
-				}
-				else {
-					// Imprime en la consola interna del STM32 el error
-					printf("Parseo erroneo: %s\r\n", usb_rx_buffer);
-
-					// Avisamos a Python de que ha ido MAL
-					snprintf(tx_buffer, sizeof(tx_buffer), "Parseo erroneo\n");
-					CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
+		case NRT_STATE_PARSING:
+			// HOME? -> rutina homing
+			// else if comando de entrenaiento? -> movemos motor
+			// else -> ERROR parseo
+			if (strncmp((char*)usb_rx_buffer, "HOME", 4) == 0) {
+				current_state = NRT_STATE_HOMING;
+			} else {
+				if (sscanf((char*)usb_rx_buffer, "V:%f,A:%f,D:%f,G:%f", &vel, &acc, &dec, &angulo) == 4) {
+					current_state = NRT_STATE_MOVING;
+				} else {
+					current_state = NRT_STATE_ERROR;
 				}
 			}
+			break;
 
-			// Flag a 0 para recibir el siguiente mensaje
+		case NRT_STATE_HOMING:
+			// hacemos rutina de homing
+			homing_routine();
+			snprintf(tx_buffer, sizeof(tx_buffer), "Homing completado\n");
+			CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
+
+			//ponemos flag USB a 0 y actualizamos estado a IDLE
 			usb_rx_flag = 0;
-		}
+			current_state = NRT_STATE_IDLE;
+			break;
 
-		// Si no ha llegado nada por serial, cedemos el control a FreeRTOS
-		vTaskDelay(10);
+		case NRT_STATE_MOVING:
+			// 1. Imprime en la consola interna del STM32
+			printf("Angulo: %.2f\r\n", angulo);
+
+			// 2. Avisamos a Python de que ha ido bien
+			snprintf(tx_buffer, sizeof(tx_buffer), "Angulo recibido\n");
+			CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
+
+			// 3. Actualizamos los parámetros del motor "al vuelo"
+			dSPIN_Set_Param(dSPIN_MAX_SPEED, MaxSpd_Steps_to_Par(vel));
+			dSPIN_Set_Param(dSPIN_ACC, AccDec_Steps_to_Par(acc));
+			dSPIN_Set_Param(dSPIN_DEC, AccDec_Steps_to_Par(dec));
+
+			// 4. Movemos la plataforma
+			move_to_ang(angulo);
+
+			//ponemos flag USB a 0 y actualizamos estado a IDLE
+			usb_rx_flag = 0;
+			current_state = NRT_STATE_IDLE;
+			break;
+
+		case NRT_STATE_ERROR:
+			// Imprime en la consola interna del STM32 el error
+			printf("Parseo erroneo: %s\r\n", usb_rx_buffer);
+
+			// Avisamos a Python de que ha ido MAL
+			snprintf(tx_buffer, sizeof(tx_buffer), "Parseo erroneo\n");
+			CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
+
+			//ponemos flag USB a 0 y actualizamos estado a IDLE
+			usb_rx_flag = 0;
+			current_state = NRT_STATE_IDLE;
+		}
 	}
 }
