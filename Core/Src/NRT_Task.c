@@ -96,6 +96,14 @@ void homing_routine(void){
 	dSPIN_Reset_Pos();
 }
 
+// TODO: máquina de estado con switch case
+typedef enum {
+    SYS_STATE_IDLE,
+    SYS_STATE_PARSING,
+    SYS_STATE_HOMING,
+    SYS_STATE_MOVING,
+    SYS_STATE_ERROR
+} NRT_State_t;
 
 // Variables globales del bridge
 char usb_rx_buffer[64];
