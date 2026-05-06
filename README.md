@@ -12,7 +12,7 @@ Este proyecto implementa un sistema de control de alta precisión para una mesa 
   - `interfaz_motor.py`: Código fuente en Python con hilos paralelos de transmisión y logging.
   - Recursos gráficos (`us.png`, `icofinal.ico`).
 
-> **📥 Descarga del Software:** El ejecutable precompilado de la interfaz para Windows (`E.C.H.O. Platform.exe`) se encuentra disponible en la sección **[Releases](https://github.com/manuikerr/NAS_Rotatory_Table/releases)e este repositorio dentro de un archivo empaquetado junto a sus dependencias.
+> **📥 Descarga del Software:** El ejecutable precompilado de la interfaz para Windows (`E.C.H.O. Platform.exe`) se encuentra disponible en la sección **[Releases](https://github.com/manuikerr/NAS_Rotatory_Table/releases)** de este repositorio dentro de un archivo empaquetado junto a sus dependencias.
 
 ---
 
