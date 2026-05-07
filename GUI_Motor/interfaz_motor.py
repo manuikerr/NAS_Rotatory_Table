@@ -33,9 +33,8 @@ class MotorGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("Panel de Control - Mesa Rotatoria STM32")
-        self.root.geometry("880x800") 
+        self.root.geometry("880x880")
         ruta_base = os.path.dirname(os.path.abspath(__file__))
-
 
         # Variables de control
         self.entrenando = False
@@ -130,9 +129,32 @@ class MotorGUI:
         ttk.Checkbutton(frame_motor, text="🔗 Vincular Acc/Dec (Mismo valor simétrico, Dec toma el valor que genere Acc)", 
                         variable=self.var_link_acc_dec, command=self.toggle_entries).grid(row=4, column=0, columnspan=3, sticky="w", pady=(8,0))
 
+        # --- FRAME KVAL (NUEVO - PORCENTAJES) ---
+        frame_kval = ttk.LabelFrame(self.root, text="K_Values (Potencia Motor: 0% - 100%)", padding=10)
+        frame_kval.grid(row=3, column=0, padx=10, pady=(0, 10), sticky="ew")
+        
+        ttk.Label(frame_kval, text="HOLD:").grid(row=0, column=0, padx=(0,5))
+        self.entry_khold = ttk.Entry(frame_kval, width=5)
+        self.entry_khold.grid(row=0, column=1, padx=(0,15))
+        
+        ttk.Label(frame_kval, text="RUN:").grid(row=0, column=2, padx=(0,5))
+        self.entry_krun = ttk.Entry(frame_kval, width=5)
+        self.entry_krun.grid(row=0, column=3, padx=(0,15))
+
+        ttk.Label(frame_kval, text="ACC:").grid(row=0, column=4, padx=(0,5))
+        self.entry_kacc = ttk.Entry(frame_kval, width=5)
+        self.entry_kacc.grid(row=0, column=5, padx=(0,15))
+
+        ttk.Label(frame_kval, text="DEC:").grid(row=0, column=6, padx=(0,5))
+        self.entry_kdec = ttk.Entry(frame_kval, width=5)
+        self.entry_kdec.grid(row=0, column=7, padx=(0,15))
+
+        ttk.Button(frame_kval, text="⚡ APLICAR KVALS", command=self.comando_enviar_kvals).grid(row=0, column=8, padx=20)
+
+
         # --- FRAME BOTONES DE CONTROL ---
         frame_botones = tk.Frame(self.root)
-        frame_botones.grid(row=3, column=0, padx=10, pady=15)
+        frame_botones.grid(row=4, column=0, padx=10, pady=15)
 
         style = ttk.Style()
         style.configure("H.TButton", font=("Arial", 10, "bold"), foreground="blue")
@@ -147,8 +169,8 @@ class MotorGUI:
 
         # --- FRAME CONSOLA ---
         frame_consola = ttk.LabelFrame(self.root, text="Consola de Telemetría (Real-time)", padding=10)
-        frame_consola.grid(row=4, column=0, padx=10, pady=10, sticky="nsew")
-        self.root.grid_rowconfigure(4, weight=1)
+        frame_consola.grid(row=5, column=0, padx=10, pady=10, sticky="nsew")
+        self.root.grid_rowconfigure(5, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
 
         self.consola = scrolledtext.ScrolledText(frame_consola, bg="#0c0c0c", fg="#33ff33", font=("Consolas", 10), state='disabled')
@@ -183,7 +205,9 @@ class MotorGUI:
             "r_acc": self.var_rand_acc.get(), "r_dec": self.var_rand_dec.get(),
             "link": self.var_link_acc_dec.get(),
             "f_ang": self.entry_ang.get(), "f_vel": self.entry_vel.get(),
-            "f_acc": self.entry_acc.get(), "f_dec": self.entry_dec.get()
+            "f_acc": self.entry_acc.get(), "f_dec": self.entry_dec.get(),
+            "k_hold": self.entry_khold.get(), "k_run": self.entry_krun.get(),
+            "k_acc": self.entry_kacc.get(), "k_dec": self.entry_kdec.get()
         }
         with open(self.archivo_config, 'w') as f: json.dump(config, f)
 
@@ -204,6 +228,11 @@ class MotorGUI:
                 self.entry_vel.insert(0, c.get("f_vel", "500.0"))
                 self.entry_acc.insert(0, c.get("f_acc", "1000.0"))
                 self.entry_dec.insert(0, c.get("f_dec", "1000.0"))
+                # Valores por defecto en porcentaje
+                self.entry_khold.insert(0, c.get("k_hold", "10"))
+                self.entry_krun.insert(0, c.get("k_run", "30"))
+                self.entry_kacc.insert(0, c.get("k_acc", "30"))
+                self.entry_kdec.insert(0, c.get("k_dec", "30"))
         else:
             for e, v in [(self.entry_baud, "115200"), (self.entry_horas, "0.5"), (self.entry_espera, "5.0")]:
                 e.insert(0, v)
@@ -238,6 +267,30 @@ class MotorGUI:
         if self.log_file: 
             self.log_file.write(info + "\n")
             self.log_file.flush()
+
+    def comando_enviar_kvals(self):
+        if self.entrenando: 
+            return print("[!] Detén el ciclo para ajustar los KVALs.")
+        if not self.conectar_serial(): 
+            return
+        try:
+            kh = int(self.entry_khold.get())
+            kr = int(self.entry_krun.get())
+            ka = int(self.entry_kacc.get())
+            kd = int(self.entry_kdec.get())
+            
+            # Validación por porcentaje
+            if any(val < 0 or val > 100 for val in [kh, kr, ka, kd]):
+                return print("[!] Error: Los KVALs deben estar entre 0% y 100%.")
+
+            cmd = f"K:{kh},{kr},{ka},{kd}\n"
+            print(f"[...] Configurando Potencia Motor -> {cmd.strip()}%")
+            self.conexion.write(cmd.encode())
+            res = self.conexion.readline().decode('utf-8').strip()
+            print(f"[✔] [STM32]: {res}")
+            
+        except ValueError:
+            print("[!] Error: Asegúrate de introducir números enteros (0-100) en los KVALs.")
 
     def comando_homing(self):
         if self.entrenando: return print("[!] Detén el ciclo antes de Homing.")

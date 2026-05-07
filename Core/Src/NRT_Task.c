@@ -100,6 +100,7 @@ void homing_routine(void){
 typedef enum {
 	NRT_STATE_IDLE,
     NRT_STATE_PARSING,
+	NRT_STATE_UPDATE,
     NRT_STATE_HOMING,
     NRT_STATE_MOVING,
     NRT_STATE_ERROR
@@ -109,6 +110,8 @@ typedef enum {
 char usb_rx_buffer[64];
 volatile uint8_t usb_rx_flag = 0;
 
+
+// TODO: poder cambiar los K_VALS en la GUI del motor
 void NRT_Task(void * parg){
 
 	// --- 1. INICIALIZACIÓN ---
@@ -118,6 +121,7 @@ void NRT_Task(void * parg){
 
 	char tx_buffer[64];
 	float vel = 0.0f, acc = 0.0f, dec = 0.0f, angulo = 0.0f;
+	int k_hold = 0, k_run = 0, k_acc = 0, k_dec = 0;
 
 	NRT_State_t current_state = NRT_STATE_IDLE;
 
@@ -135,27 +139,49 @@ void NRT_Task(void * parg){
 			break;
 
 		case NRT_STATE_PARSING:
-			// HOME? -> rutina homing
-			// else if comando de entrenaiento? -> movemos motor
-			// else -> ERROR parseo
+			// 1. HOME -> rutina homing
 			if (strncmp((char*)usb_rx_buffer, "HOME", 4) == 0) {
 				current_state = NRT_STATE_HOMING;
-			} else {
-				if (sscanf((char*)usb_rx_buffer, "V:%f,A:%f,D:%f,G:%f", &vel, &acc, &dec, &angulo) == 4) {
-					current_state = NRT_STATE_MOVING;
-				} else {
-					current_state = NRT_STATE_ERROR;
-				}
 			}
+			// 2. else if k_values -> update
+			else if (sscanf((char*)usb_rx_buffer, "K:%d,%d,%d,%d", &k_hold, &k_run, &k_acc, &k_dec) == 4) {
+			    current_state = NRT_STATE_UPDATE;
+			}
+			// 3. else if comando de entrenamiento -> movemos motor
+			else if (sscanf((char*)usb_rx_buffer, "V:%f,A:%f,D:%f,G:%f", &vel_target, &acc_target, &dec_target, &angulo_target) == 4) {
+                current_state = NRT_STATE_MOVING;
+            }
+			// 4. else -> ERROR parseo
+			else {
+                current_state = NRT_STATE_ERROR;
+            }
+            break;
+
+		case NRT_STATE_UPDATE:
+			// 1. Aplicamos K_Values
+			dSPIN_Set_Param(dSPIN_KVAL_HOLD, Kval_Perc_to_Par(k_h));
+			dSPIN_Set_Param(dSPIN_KVAL_RUN,  Kval_Perc_to_Par(k_r));
+			dSPIN_Set_Param(dSPIN_KVAL_ACC,  Kval_Perc_to_Par(k_a));
+			dSPIN_Set_Param(dSPIN_KVAL_DEC,  Kval_Perc_to_Par(k_d));
+
+			// 2. Avisamos de que ha ido bien y oonemos los valores
+			snprintf(tx_buffer, sizeof(tx_buffer), "KVAL OK -> HOLD:%d%% RUN:%d%% ACC:%d%% DEC:%d%%\n", k_hold, k_run, k_acc, k_dec);
+			CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
+
+			// 3. Ponemos flag USB a 0 y actualizamos estado a IDLE
+			usb_rx_flag = 0;
+			current_state = SYS_STATE_IDLE;
 			break;
 
 		case NRT_STATE_HOMING:
-			// hacemos rutina de homing
+			// 1. hacemos rutina de homing
 			homing_routine();
+
+			// 2. Avisamos de que hemos terminado el homing
 			snprintf(tx_buffer, sizeof(tx_buffer), "Homing completado\n");
 			CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
 
-			//ponemos flag USB a 0 y actualizamos estado a IDLE
+			//3. Ponemos flag USB a 0 y actualizamos estado a IDLE
 			usb_rx_flag = 0;
 			current_state = NRT_STATE_IDLE;
 			break;
@@ -176,20 +202,20 @@ void NRT_Task(void * parg){
 			// 4. Movemos la plataforma
 			move_to_ang(angulo);
 
-			//ponemos flag USB a 0 y actualizamos estado a IDLE
+			// 5. Ponemos flag USB a 0 y actualizamos estado a IDLE
 			usb_rx_flag = 0;
 			current_state = NRT_STATE_IDLE;
 			break;
 
 		case NRT_STATE_ERROR:
-			// Imprime en la consola interna del STM32 el error
+			// 1. Imprime en la consola interna del STM32 el error
 			printf("Parseo erroneo: %s\r\n", usb_rx_buffer);
 
-			// Avisamos a Python de que ha ido MAL
+			// 2. Avisamos a Python de que ha ido MAL
 			snprintf(tx_buffer, sizeof(tx_buffer), "Parseo erroneo\n");
 			CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
 
-			//ponemos flag USB a 0 y actualizamos estado a IDLE
+			// 3. Ponemos flag USB a 0 y actualizamos estado a IDLE
 			usb_rx_flag = 0;
 			current_state = NRT_STATE_IDLE;
 		}
