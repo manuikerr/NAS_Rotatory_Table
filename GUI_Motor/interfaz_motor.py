@@ -135,19 +135,23 @@ class MotorGUI:
         
         # Checkbuttons y Entries de movimiento
         ttk.Checkbutton(frame_motor, text="Ángulo Aleatorio (-180 a 180)", variable=self.var_rand_ang, command=self.toggle_entries).grid(row=0, column=0, sticky="w")
+        ttk.Label(frame_motor, text="Fijo:").grid(row=0, column=1, padx=5)
         self.entry_ang = ttk.Entry(frame_motor, width=10)
         self.entry_ang.grid(row=0, column=2, pady=2)
 
         ttk.Checkbutton(frame_motor, text="Velocidad Aleatoria (200 a 800)", variable=self.var_rand_vel, command=self.toggle_entries).grid(row=1, column=0, sticky="w")
+        ttk.Label(frame_motor, text="Fijo:").grid(row=1, column=1, padx=5)
         self.entry_vel = ttk.Entry(frame_motor, width=10)
         self.entry_vel.grid(row=1, column=2, pady=2)
 
         ttk.Checkbutton(frame_motor, text="Aceleración Aleatoria (800 a 4000)", variable=self.var_rand_acc, command=self.toggle_entries).grid(row=2, column=0, sticky="w")
+        ttk.Label(frame_motor, text="Fijo:").grid(row=2, column=1, padx=5)
         self.entry_acc = ttk.Entry(frame_motor, width=10)
         self.entry_acc.grid(row=2, column=2, pady=2)
 
         self.check_rand_dec = ttk.Checkbutton(frame_motor, text="Desaceleración Aleatoria (800 a 4000)", variable=self.var_rand_dec, command=self.toggle_entries)
         self.check_rand_dec.grid(row=3, column=0, sticky="w")
+        ttk.Label(frame_motor, text="Fijo:").grid(row=3, column=1, padx=5)
         self.entry_dec = ttk.Entry(frame_motor, width=10)
         self.entry_dec.grid(row=3, column=2, pady=2)
 
@@ -319,7 +323,7 @@ class MotorGUI:
     def comando_soft_stop(self):
         if self.entrenando:
             self.entrenando = False
-            print("[...] S. STOP: Pidiendo parada segura...")
+            print("[...] SOFT STOP: Pidiendo parada segura...")
 
     # =============================================================================
     # SECCIÓN: LÓGICA DE ENTRENAMIENTO (HILO SECUNDARIO)
