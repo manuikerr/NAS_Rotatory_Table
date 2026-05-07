@@ -140,7 +140,7 @@ void NRT_Task(void * parg){
 
 		case NRT_STATE_PARSING:
 			// 1. else if comando de entrenamiento -> movemos motor
-			if (sscanf((char*)usb_rx_buffer, "V:%f,A:%f,D:%f,G:%f", &vel_target, &acc_target, &dec_target, &angulo_target) == 4) {
+			if (sscanf((char*)usb_rx_buffer, "V:%f,A:%f,D:%f,G:%f", &vel, &acc, &dec, &angulo) == 4) {
 			                current_state = NRT_STATE_MOVING;
 			}
 			// 2. else if k_values -> update
@@ -159,10 +159,10 @@ void NRT_Task(void * parg){
 
 		case NRT_STATE_UPDATE:
 			// 1. Aplicamos K_Values
-			dSPIN_Set_Param(dSPIN_KVAL_HOLD, Kval_Perc_to_Par(k_h));
-			dSPIN_Set_Param(dSPIN_KVAL_RUN,  Kval_Perc_to_Par(k_r));
-			dSPIN_Set_Param(dSPIN_KVAL_ACC,  Kval_Perc_to_Par(k_a));
-			dSPIN_Set_Param(dSPIN_KVAL_DEC,  Kval_Perc_to_Par(k_d));
+			dSPIN_Set_Param(dSPIN_KVAL_HOLD, Kval_Perc_to_Par(k_hold));
+			dSPIN_Set_Param(dSPIN_KVAL_RUN,  Kval_Perc_to_Par(k_run));
+			dSPIN_Set_Param(dSPIN_KVAL_ACC,  Kval_Perc_to_Par(k_acc));
+			dSPIN_Set_Param(dSPIN_KVAL_DEC,  Kval_Perc_to_Par(k_dec));
 
 			// 2. Avisamos de que ha ido bien y oonemos los valores
 			snprintf(tx_buffer, sizeof(tx_buffer), "KVAL OK -> HOLD:%d%% RUN:%d%% ACC:%d%% DEC:%d%%\n", k_hold, k_run, k_acc, k_dec);
@@ -170,7 +170,7 @@ void NRT_Task(void * parg){
 
 			// 3. Ponemos flag USB a 0 y actualizamos estado a IDLE
 			usb_rx_flag = 0;
-			current_state = SYS_STATE_IDLE;
+			current_state = NRT_STATE_IDLE;
 			break;
 
 		case NRT_STATE_HOMING:
