@@ -1,1 +1,1 @@
-{"puerto": "", "baud": "115200", "horas": "0.5", "espera": "5.0", "r_ang": true, "r_vel": true, "r_acc": true, "r_dec": true, "link": true, "f_ang": "", "f_vel": "", "f_acc": "", "f_dec": "", "k_hold": "10", "k_run": "30", "k_acc": "30", "k_dec": "30"}
+{"puerto": "", "baud": "115200", "horas": "0.5", "espera": "5.0"}
