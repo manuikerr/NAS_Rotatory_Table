@@ -266,7 +266,6 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
 
-//TODO: comunicación entre STM y script
 extern char usb_rx_buffer[64];
 extern volatile uint8_t usb_rx_flag;
 

@@ -10,7 +10,7 @@
 #include "Task.h"
 #include "L6470_Driver.h"
 #include <stdlib.h> // Para conversiones de datos y gestión de tipos estándar
-#include <stdio.h>  // Para sscanf(): permite desempaquetar la trama V,A,D,G recibida del PC
+#include <stdio.h>  // Para sscanf(): permite desempaquetar las tramas recibidas por el PC
 #include "usbd_cdc_if.h"
 
 // Importamos el puerto serie (UART1)
@@ -111,7 +111,6 @@ char usb_rx_buffer[64];
 volatile uint8_t usb_rx_flag = 0;
 
 
-// TODO: poder cambiar los K_VALS en la GUI del motor
 void NRT_Task(void * parg){
 
 	// --- 1. INICIALIZACIÓN ---
@@ -143,14 +142,14 @@ void NRT_Task(void * parg){
 			if (sscanf((char*)usb_rx_buffer, "V:%f,A:%f,D:%f,G:%f", &vel, &acc, &dec, &angulo) == 4) {
 			                current_state = NRT_STATE_MOVING;
 			}
-			// 2. else if k_values -> update
-			else if (sscanf((char*)usb_rx_buffer, "K:%d,%d,%d,%d", &k_hold, &k_run, &k_acc, &k_dec) == 4) {
-			    current_state = NRT_STATE_UPDATE;
-			}
-			// 3. HOME -> rutina homing
+			// 2. HOME -> rutina homing
 			else if (strncmp((char*)usb_rx_buffer, "HOME", 4) == 0) {
 				current_state = NRT_STATE_HOMING;
             }
+			// 3. else if k_values -> update
+			else if (sscanf((char*)usb_rx_buffer, "K:%d,%d,%d,%d", &k_hold, &k_run, &k_acc, &k_dec) == 4) {
+			    current_state = NRT_STATE_UPDATE;
+			}
 			// 4. else -> ERROR parseo
 			else {
                 current_state = NRT_STATE_ERROR;
