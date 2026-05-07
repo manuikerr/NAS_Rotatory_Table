@@ -139,17 +139,17 @@ void NRT_Task(void * parg){
 			break;
 
 		case NRT_STATE_PARSING:
-			// 1. HOME -> rutina homing
-			if (strncmp((char*)usb_rx_buffer, "HOME", 4) == 0) {
-				current_state = NRT_STATE_HOMING;
+			// 1. else if comando de entrenamiento -> movemos motor
+			if (sscanf((char*)usb_rx_buffer, "V:%f,A:%f,D:%f,G:%f", &vel_target, &acc_target, &dec_target, &angulo_target) == 4) {
+			                current_state = NRT_STATE_MOVING;
 			}
 			// 2. else if k_values -> update
 			else if (sscanf((char*)usb_rx_buffer, "K:%d,%d,%d,%d", &k_hold, &k_run, &k_acc, &k_dec) == 4) {
 			    current_state = NRT_STATE_UPDATE;
 			}
-			// 3. else if comando de entrenamiento -> movemos motor
-			else if (sscanf((char*)usb_rx_buffer, "V:%f,A:%f,D:%f,G:%f", &vel_target, &acc_target, &dec_target, &angulo_target) == 4) {
-                current_state = NRT_STATE_MOVING;
+			// 3. HOME -> rutina homing
+			else if (strncmp((char*)usb_rx_buffer, "HOME", 4) == 0) {
+				current_state = NRT_STATE_HOMING;
             }
 			// 4. else -> ERROR parseo
 			else {
