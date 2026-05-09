@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import ttk, scrolledtext, filedialog
 import serial
 import serial.tools.list_ports
 import time
@@ -10,9 +10,10 @@ from datetime import datetime
 import threading
 import sys
 from PIL import Image, ImageTk 
+import csv
 
 # =============================================================================
-# SECCIÓN: REDIRECCIÓN DE CONSOLA
+# REDIRECCIÓN DE CONSOLA
 # =============================================================================
 class ConsoleRedirector:
     def __init__(self, text_widget):
@@ -31,7 +32,7 @@ class ConsoleRedirector:
         pass
 
 # =============================================================================
-# SECCIÓN: CLASE PRINCIPAL Y CONFIGURACIÓN INICIAL
+# CLASE PRINCIPAL Y CONFIGURACIÓN INICIAL
 # =============================================================================
 class MotorGUI:
     def __init__(self, root):
@@ -60,7 +61,7 @@ class MotorGUI:
         self.root.protocol("WM_DELETE_WINDOW", self.cerrar_aplicacion)
 
     # =============================================================================
-    # SECCIÓN: CREACIÓN DE LA INTERFAZ (LAYOUT)
+    # CREACIÓN DE LA INTERFAZ (LAYOUT)
     # =============================================================================
     def crear_interfaz(self):
         # --- ENCABEZADO ---
@@ -157,6 +158,24 @@ class MotorGUI:
 
         ttk.Checkbutton(frame_motor, text="🔗 Vincular Acc/Dec (Simétrico)", variable=self.var_link_acc_dec, command=self.toggle_entries).grid(row=4, column=0, columnspan=3, sticky="w", pady=(8,0))
 
+        # --- SECCIÓN CSV ---
+        ttk.Separator(frame_motor, orient="horizontal").grid(row=5, column=0, columnspan=3, sticky="ew", pady=(15, 10))
+
+        self.rutina_csv = [] 
+
+        frame_csv = tk.Frame(frame_motor)
+        frame_csv.grid(row=6, column=0, columnspan=3, sticky="w")
+
+        ttk.Button(frame_csv, text="Cargar Rutina CSV", command=self.comando_cargar_csv).pack(side=tk.LEFT)
+        
+        # Botón para borrar el CSV cargado y volver a modo manual
+        self.btn_borrar_csv = ttk.Button(frame_csv, text="✖", width=3, command=self.borrar_rutina_csv)
+        self.btn_borrar_csv.pack(side=tk.LEFT, padx=5)
+        self.btn_borrar_csv.state(['disabled']) # Desactivado por defecto
+
+        self.label_csv = ttk.Label(frame_csv, text="Modo: Aleatorio/Fijo", font=("Arial", 8, "italic"), foreground="gray")
+        self.label_csv.pack(side=tk.LEFT, padx=5)
+
         # K-Values (Potencia)
         frame_kval = ttk.LabelFrame(frame_motor_master, text="K_Values (Potencia: 0% - 100%)", padding=10)
         frame_kval.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
@@ -193,7 +212,7 @@ class MotorGUI:
         self.led_motor.pack(side=tk.LEFT, padx=10)
 
         # =============================================================================
-        # SECCIÓN: LÓGICA DE ICONOS Y BOTONES DE CONTROL
+        # LÓGICA DE ICONOS Y BOTONES DE CONTROL
         # =============================================================================
         frame_botones = tk.Frame(frame_operacion)
         frame_botones.pack(side=tk.RIGHT)
@@ -241,7 +260,7 @@ class MotorGUI:
         self.consola.pack(fill=tk.BOTH, expand=True)
 
     # =============================================================================
-    # SECCIÓN: FUNCIONES DE ACTUALIZACIÓN DE UI
+    # FUNCIONES DE ACTUALIZACIÓN DE UI
     # =============================================================================
     def actualizar_progreso_ui(self, movs, seg_restantes):
         def _update():
@@ -267,17 +286,22 @@ class MotorGUI:
         self.root.after(0, _update)
 
     def toggle_entries(self):
-        self.entry_ang.state(['disabled'] if self.var_rand_ang.get() else ['!disabled'])
-        self.entry_vel.state(['disabled'] if self.var_rand_vel.get() else ['!disabled'])
-        self.entry_acc.state(['disabled'] if self.var_rand_acc.get() else ['!disabled'])
-        if self.var_link_acc_dec.get():
-            self.check_rand_dec.state(['disabled']); self.entry_dec.state(['disabled'])
+        # Si la lista rutina_csv tiene contenido, bloqueamos lo manual
+        hay_csv = len(self.rutina_csv) > 0
+        
+        self.entry_ang.state(['disabled'] if self.var_rand_ang.get() or hay_csv else ['!disabled'])
+        self.entry_vel.state(['disabled'] if self.var_rand_vel.get() or hay_csv else ['!disabled'])
+        self.entry_acc.state(['disabled'] if self.var_rand_acc.get() or hay_csv else ['!disabled'])
+        
+        if self.var_link_acc_dec.get() or hay_csv:
+            self.check_rand_dec.state(['disabled'])
+            self.entry_dec.state(['disabled'])
         else:
             self.check_rand_dec.state(['!disabled'])
             self.entry_dec.state(['disabled'] if self.var_rand_dec.get() else ['!disabled'])
 
     # =============================================================================
-    # SECCIÓN: FUNCIONES SERIAL Y COMANDOS MOTOR
+    # FUNCIONES SERIAL Y COMANDOS MOTOR
     # =============================================================================
     def obtener_puertos(self):
         return [p.device for p in serial.tools.list_ports.comports()]
@@ -298,6 +322,7 @@ class MotorGUI:
         try:
             kh, kr, ka, kd = int(self.entry_khold.get()), int(self.entry_krun.get()), int(self.entry_kacc.get()), int(self.entry_kdec.get())
             cmd = f"K:{kh},{kr},{ka},{kd}\n"
+            print(f"[PC] Enviando configuración KVALs: {cmd.strip()}")            
             self.conexion.write(cmd.encode())
             res = self.conexion.readline().decode('utf-8').strip()
             print(f"[✔] [STM32]: {res}")
@@ -305,6 +330,7 @@ class MotorGUI:
 
     def comando_homing(self):
         if self.entrenando or not self.conectar_serial(timeout=12.0): return
+        print(f"[PC] Ejecutando rutina de Homing...")
         self.actualizar_led_motor("HOMING")
         self.conexion.write(b"HOME\n")
         res = self.conexion.readline().decode('utf-8').strip()
@@ -323,21 +349,72 @@ class MotorGUI:
     def comando_soft_stop(self):
         if self.entrenando:
             self.entrenando = False
-            print("[...] SOFT STOP: Pidiendo parada segura...")
+            print("[PC] SOFT STOP: Pidiendo parada segura...")
+    
+    def comando_cargar_csv(self):
+        archivo = filedialog.askopenfilename(
+            title="Seleccionar rutina de entrenamiento",
+            filetypes=[("Archivos CSV", "*.csv"), ("Todos los archivos", "*.*")]
+        )
+        if not archivo:
+            return
+            
+        try:
+            with open(archivo, newline='', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                rutina_temp = []
+                for fila in reader:
+                    # Extraemos los valores. Si falta una columna, usamos un valor por defecto
+                    v = float(fila.get('V', 500))
+                    a = float(fila.get('A', 1000))
+                    d = float(fila.get('D', 1000))
+                    g = float(fila.get('G', 90))
+                    rutina_temp.append((v, a, d, g))
+                    
+            if rutina_temp:
+                self.rutina_csv = rutina_temp
+                nombre_archivo = os.path.basename(archivo)
+                # Actualizamos el label y activamos el botón de borrar (X)
+                self.label_csv.config(text=f"{nombre_archivo} ({len(rutina_temp)} movs)", foreground="green")
+                self.btn_borrar_csv.state(['!disabled'])
+                
+                # Bloqueamos entradas manuales automáticamente
+                self.toggle_entries()
+                print(f"[✔] CSV cargado con éxito: {nombre_archivo}")
+            else:
+                print("[!] El archivo CSV está vacío o el formato es incorrecto.")
+                
+        except Exception as e:
+            print(f"[!] Error al leer el CSV: {e}")
+        
+    def borrar_rutina_csv(self):
+        self.rutina_csv = []
+        self.label_csv.config(text="Modo: Aleatorio/Fijo", foreground="gray")
+        self.btn_borrar_csv.state(['disabled'])
+        self.toggle_entries() # Esto reactivará las casillas manuales
+        print("[-] Rutina CSV descartada. Volviendo a modo manual.")
 
     # =============================================================================
-    # SECCIÓN: LÓGICA DE ENTRENAMIENTO (HILO SECUNDARIO)
+    # LÓGICA DE ENTRENAMIENTO (HILO SECUNDARIO)
     # =============================================================================
     def rutina_entrenamiento(self):
-        print("\n[▶] Ciclo de entrenamiento iniciado.")
+        horas = self.entry_horas.get()
+        pausa = self.entry_espera.get()
+        
+        print(f"\n[▶] Ciclo de entrenamiento iniciado (Duración: {horas}h | Pausa: {pausa}s)")
         try:
             limite = time.time() + (float(self.entry_horas.get()) * 3600)
             espera = float(self.entry_espera.get())
             while self.entrenando and time.time() < limite:
-                g = random.uniform(-180, 180) if self.var_rand_ang.get() else float(self.entry_ang.get())
-                v = random.uniform(200, 800) if self.var_rand_vel.get() else float(self.entry_vel.get())
-                a = random.uniform(800, 4000) if self.var_rand_acc.get() else float(self.entry_acc.get())
-                d = a if self.var_link_acc_dec.get() else (random.uniform(800, 4000) if self.var_rand_dec.get() else float(self.entry_dec.get()))
+                
+                if self.rutina_csv:
+                    indice = self.movimientos_count % len(self.rutina_csv)
+                    v, a, d, g = self.rutina_csv[indice]
+                else:
+                    g = random.uniform(-180, 180) if self.var_rand_ang.get() else float(self.entry_ang.get())
+                    v = random.uniform(200, 800) if self.var_rand_vel.get() else float(self.entry_vel.get())
+                    a = random.uniform(800, 4000) if self.var_rand_acc.get() else float(self.entry_acc.get())
+                    d = a if self.var_link_acc_dec.get() else (random.uniform(800, 4000) if self.var_rand_dec.get() else float(self.entry_dec.get()))
                 
                 self.enviar_comando_dinamico(v, a, d, g)
                 self.movimientos_count += 1
@@ -357,10 +434,10 @@ class MotorGUI:
         cmd = f"V:{v:.1f},A:{a:.1f},D:{d:.1f},G:{g:.2f}\n"
         self.conexion.write(cmd.encode('utf-8'))
         res = self.conexion.readline().decode('utf-8').strip() or "TIMEOUT"
-        print(f"-> Ang:{g:>6.1f}º | V:{v:>4.0f} | A:{a:>4.0f} | [STM32]: {res}")
+        print(f"[PC] Ang:{g:>6.1f}º | V:{v:>4.0f} | A:{a:>4.0f} | D:{d:>4.0f} | -> [STM32]: {res}")
 
     # =============================================================================
-    # SECCIÓN: GESTIÓN DE CONFIGURACIÓN Y CIERRE
+    # GESTIÓN DE CONFIGURACIÓN Y CIERRE
     # =============================================================================
     def inicializar_log(self):
         if not os.path.exists("logs"): os.makedirs("logs")

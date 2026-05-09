@@ -96,6 +96,7 @@ void homing_routine(void){
 	dSPIN_Reset_Pos();
 }
 
+
 // estados
 typedef enum {
 	NRT_STATE_IDLE,
@@ -217,6 +218,7 @@ void NRT_Task(void * parg){
 			// 3. Ponemos flag USB a 0 y actualizamos estado a IDLE
 			usb_rx_flag = 0;
 			current_state = NRT_STATE_IDLE;
+			break;
 		}
 	}
 }
