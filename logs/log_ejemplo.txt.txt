@@ -1,0 +1,49 @@
+=========================================================
+GRUPO 1: CONFIGURACIÓN INICIAL (KVALS)
+=========================================================
+// Generado por comando_enviar_kvals
+[PC] Enviando configuración KVALs: K:15,40,40,40
+[✔] [STM32]: KVAL OK -> HOLD:15% RUN:40% ACC:40% DEC:40%
+
+// Generado por el except de comando_enviar_kvals
+[!] Error KVALs: invalid literal for int() with base 10: ''
+
+=========================================================
+GRUPO 2: CALIBRACIÓN (HOMING)
+=========================================================
+// Generado por comando_homing
+[PC] Ejecutando rutina de Homing...
+[✔] [STM32]: Homing completado
+
+=========================================================
+GRUPO 3: RUTINAS CSV
+=========================================================
+// Generado por comando_cargar_csv
+[✔] CSV cargado con éxito: rutina_ejemplo.csv
+
+// Generado por borrar_rutina_csv
+[-] Rutina CSV descartada. Volviendo a modo manual.
+
+=========================================================
+GRUPO 4: ENTRENAMIENTO Y MOVIMIENTO
+=========================================================
+// Generado al inicio de rutina_entrenamiento
+[▶] Ciclo de entrenamiento iniciado (Duración: 0.5h | Pausa: 5.0s)
+
+// Generado por enviar_comando_dinamico
+// Nota: El STM32 devuelve "TIMEOUT" si readline() está vacío
+[PC] Ang:  45.0º | V: 500 | A: 1000 | D: 1000 | -> [STM32]: Angulo recibido
+[PC] Ang: -120.5º | V: 650 | A: 2100 | D: 2100 | -> [STM32]: Angulo recibido
+[PC] Ang:   0.0º | V: 300 | A:  800 | D:  800 | -> [STM32]: TIMEOUT
+
+=========================================================
+GRUPO 5: PARADAS Y CIERRE
+=========================================================
+// Generado por comando_soft_stop
+[PC] SOFT STOP: Pidiendo parada segura...
+
+// Generado por el finally de rutina_entrenamiento
+[✔] Entrenamiento detenido.
+
+// Generado por el catch de conectar_serial
+[!] Error Serial: could not open port 'COM3'
