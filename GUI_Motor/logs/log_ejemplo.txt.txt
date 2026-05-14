@@ -11,9 +11,9 @@ GRUPO 1: CONFIGURACIÓN INICIAL (KVALS)
 =========================================================
 GRUPO 2: CALIBRACIÓN (HOMING)
 =========================================================
-// Generado por comando_homing
-[PC] Ejecutando rutina de Homing...
-[✔] [STM32]: Homing completado
+// Generado por comando_homing)
+[15:34:12.105] [PC] Ejecutando rutina de Homing...
+[15:34:13.112] [✔] [STM32]: Homing completado
 
 =========================================================
 GRUPO 3: RUTINAS CSV
@@ -28,19 +28,18 @@ GRUPO 3: RUTINAS CSV
 GRUPO 4: ENTRENAMIENTO Y MOVIMIENTO
 =========================================================
 // Generado al inicio de rutina_entrenamiento
-[▶] Ciclo de entrenamiento iniciado (Duración: 0.5h | Pausa: 5.0s)
+[15:34:14.997] [▶] Ciclo de entrenamiento iniciado (Duración: 0.5h | Pausa: 5.0s)
 
-// Generado por enviar_comando_dinamico
-// Nota: El STM32 devuelve "TIMEOUT" si readline() está vacío
-[PC] Ang:  45.0º | V: 500 | A: 1000 | D: 1000 | -> [STM32]: Angulo recibido
-[PC] Ang: -120.5º | V: 650 | A: 2100 | D: 2100 | -> [STM32]: Angulo recibido
-[PC] Ang:   0.0º | V: 300 | A:  800 | D:  800 | -> [STM32]: TIMEOUT
+// Generado por enviar_comando_dinamico (Muestra timestamps de 4 dígitos)
+[15:34:15.002] [PC] Ang:  45.0º | V: 500 | A:1000 | D:1000 | -> [STM32]: Angulo recibido
+[15:34:20.045] [PC] Ang:-120.5º | V: 650 | A:2100 | D:2100 | -> [STM32]: Angulo recibido
+[15:34:25.091] [PC] Ang:   0.0º | V: 300 | A: 800 | D: 800 | -> [STM32]: TIMEOUT
 
 =========================================================
 GRUPO 5: PARADAS Y CIERRE
 =========================================================
 // Generado por comando_soft_stop
-[PC] SOFT STOP: Pidiendo parada segura...
+[15:34:27.318] [PC] SOFT STOP: Pidiendo parada segura...
 
 // Generado por el finally de rutina_entrenamiento
 [✔] Entrenamiento detenido.
