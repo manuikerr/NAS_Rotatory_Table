@@ -42,7 +42,7 @@ El firmware se ha optimizado para transformarlo en un sistema modular, seguro y 
 
 ### 🛠️ Comandos Dinámicos y Calibración de Home
 * **Comando Explícito de HOME:** Se desarrolló una instrucción de texto específica (`"HOME"`). Al ser leída por `strncmp`, conmuta inmediatamente a la función `homing_routine()`, forzando al motor a buscar su origen físico 0° y notificando su fin mediante el buffer de transmisión (`"Homing completado\n"`).
-* **Parsing Avanzado con Soporte Float:** El firmware procesa tramas complejas, admitiendo la configuración simultánea de **Velocidad, Aceleración, Desaceleración y Ángulo**. Se habilitó el soporte de tipos *float* en los *Linker Flags* del proyecto (`-u _scanf_float`) para el correcto funcionamiento de `sscanf` sobre el formato `"V:%f,A:%f,D:%f,G:%f"`.
+* **Parsing Avanzado con Soporte Float:** El firmware procesa tramas complejas, admitiendo la configuración simultánea de **Velocidad, Aceleración, Desaceleración y Ángulo**. Se habilitó el soporte de tipos *float* en los *Linker Flags* del proyecto (`Project Properties -> C/C++ Build -> Settings -> Tool Settings -> MCU GCC Linker -> Miscellaneous -> Linker Flags` añadiendo `-u _scanf_float`) para el correcto funcionamiento de `sscanf` sobre el formato `"V:%f,A:%f,D:%f,G:%f"`.
 * **Control "al vuelo":** Llamadas dinámicas a `dSPIN_Set_Param` usando funciones de conversión de parámetros de movimiento de pasos a registros (`MaxSpd_Steps_to_Par`, `AccDec_Steps_to_Par`), modificando las rampas físicas en caliente antes de ejecutar la trayectoria final `move_to_ang(angulo)`.
 
 ### 🔄 Protocolo de Comunicación y Handshake Bidireccional
