@@ -541,10 +541,10 @@ class MotorGUI:
             text="Nuevo Log", 
             width=65, 
             height=22, 
-            fg_color="transparent", 
+            fg_color="#2b2b2b", 
             border_width=1, 
-            border_color="gray50", 
-            hover_color=("gray80", "gray25"),
+            border_color="gray50",
+            hover_color="#3b3b3b",
             font=ctk.CTkFont(size=11),
             command=self.comando_nuevo_log
         )
@@ -556,10 +556,10 @@ class MotorGUI:
             text="Ver Logs", 
             width=65,    
             height=22, 
-            fg_color="transparent", 
+            fg_color="#2b2b2b", 
             border_width=1, 
-            border_color="gray50", 
-            hover_color=("gray80", "gray25"),
+            border_color="gray50",
+            hover_color="#3b3b3b",
             font=ctk.CTkFont(size=11),
             command=self.abrir_carpeta_logs
         )
