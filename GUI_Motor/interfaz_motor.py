@@ -435,18 +435,16 @@ class MotorGUI:
         """Abre el explorador de archivos en la carpeta de registros del sistema."""
         ruta_logs = os.path.join(self.ruta_base, "logs")
         
-        # Si la carpeta no existe aún (porque no se ha iniciado ningún entrenamiento), la creamos
         if not os.path.exists(ruta_logs):
             os.makedirs(ruta_logs)
             
         # Comando nativo de Windows para abrir la carpeta
-        subprocess.Popen(f'explorer "{os.path.normpath(ruta_logs)}"')
+        subprocess.Popen(['explorer', os.path.normpath(ruta_logs)], shell=True)
         print(f"[INFO] Abriendo explorador en: {ruta_logs}")
 
     def comando_nuevo_log(self):
         """Acción del botón para forzar un nuevo archivo de registro."""
         self.motor.reset_log()
-        print("[INFD] Se ha solicitado un nuevo archivo de log.")
 
     def crear_interfaz(self):
         """Renderizado estructural masivo del dashboard principal con distancias uniformes."""
