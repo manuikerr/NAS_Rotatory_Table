@@ -15,6 +15,7 @@ import csv
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+import subprocess
 
 if hasattr(sys, '_MEIPASS'):
     # Si es un .exe, la raíz es la carpeta temporal de PyInstaller
@@ -33,6 +34,9 @@ ctk.set_default_color_theme("blue")
 
 # =============================================================================
 # CLASE TOOLTIP (Hover Info)
+# =============================================================================
+# =============================================================================
+# CLASE TOOLTIP (Hover Info con Detección de Bordes)
 # =============================================================================
 class ToolTip:
     """Crea un pequeño globo de información al pasar el ratón sobre un widget."""
@@ -54,17 +58,29 @@ class ToolTip:
             self.widget.bind("<Leave>", self.leave)
 
     def enter(self, event=None):
-        """Muestra la ventana emergente con la información cuando el ratón entra en el área."""
+        """Muestra la ventana emergente calculando si colisiona con los bordes del monitor."""
         if self.tooltip_window or not self.text: return
+        
         x = self.widget.winfo_rootx() + 20
         y = self.widget.winfo_rooty() + 30
+        
         self.tooltip_window = tw = tk.Toplevel(self.widget)
         tw.wm_overrideredirect(True)
-        tw.wm_geometry(f"+{x}+{y}")
+        
         bg = "#2b2b2b" if ctk.get_appearance_mode() == "Dark" else "#f0f0f0"
         fg = "white" if ctk.get_appearance_mode() == "Dark" else "black"
+        
         tk.Label(tw, text=self.text, justify='left', background=bg, fg=fg, 
                  relief='solid', borderwidth=1, font=("Arial", 10), padx=5, pady=3).pack()
+
+        tw.update_idletasks()
+        ancho_tooltip = tw.winfo_reqwidth()
+        ancho_pantalla = self.widget.winfo_screenwidth()
+
+        if (x + ancho_tooltip) > ancho_pantalla:
+            x = ancho_pantalla - ancho_tooltip - 15
+
+        tw.wm_geometry(f"+{x}+{y}")
 
     def leave(self, event=None):
         """Destruye el globo de información cuando el ratón sale del área del widget."""
@@ -171,6 +187,18 @@ class MotorControl:
         
         print(f"[DEBUG] Guardando log en: {ruta_completa_log}")
         self.log_file = open(ruta_completa_log, "a", encoding="utf-8")
+
+    def reset_log(self):
+        """Cierra el archivo actual y fuerza la creación de uno nuevo."""
+        if getattr(self, 'log_file', None) and not getattr(self.log_file, 'closed', True):
+            try:
+                self.escribir_log("\n[INFO] --- CIERRE DE LOG ACTUAL. ABRIENDO NUEVO ARCHIVO ---\n")
+                self.log_file.close()
+            except Exception: pass
+        
+        self.log_file = None
+        self.inicializar_log()
+        print("[INFO] Se ha generado un nuevo archivo de registro .txt")
 
     def escribir_log(self, mensaje):
         """Agrega de forma segura un nuevo mensaje físico al archivo .txt abierto."""
@@ -403,6 +431,23 @@ class MotorGUI:
             print(f"Error cargando icono {ruta_archivo}: {e}")
             return None
 
+    def abrir_carpeta_logs(self):
+        """Abre el explorador de archivos en la carpeta de registros del sistema."""
+        ruta_logs = os.path.join(self.ruta_base, "logs")
+        
+        # Si la carpeta no existe aún (porque no se ha iniciado ningún entrenamiento), la creamos
+        if not os.path.exists(ruta_logs):
+            os.makedirs(ruta_logs)
+            
+        # Comando nativo de Windows para abrir la carpeta
+        subprocess.Popen(f'explorer "{os.path.normpath(ruta_logs)}"')
+        print(f"[INFO] Abriendo explorador en: {ruta_logs}")
+
+    def comando_nuevo_log(self):
+        """Acción del botón para forzar un nuevo archivo de registro."""
+        self.motor.reset_log()
+        print("[INFD] Se ha solicitado un nuevo archivo de log.")
+
     def crear_interfaz(self):
         """Renderizado estructural masivo del dashboard principal con distancias uniformes."""
         self.root.grid_columnconfigure(0, weight=1)
@@ -487,11 +532,47 @@ class MotorGUI:
         frame_progreso.columnconfigure(0, weight=1)
         frame_progreso.columnconfigure(1, weight=1)
 
-        ctk.CTkLabel(frame_progreso, text="Estadísticas", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, columnspan=2, sticky="w", padx=15, pady=(10, 10))
+        ctk.CTkLabel(frame_progreso, text="Estadísticas", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, sticky="w", padx=15, pady=(10, 5))
+
+        # --- SUB-FRAME PARA BOTONES DE LOG ---
+        frame_botones_log = ctk.CTkFrame(frame_progreso, fg_color="transparent")
+        frame_botones_log.grid(row=0, column=1, sticky="e", padx=15, pady=(10, 5))
+
+        self.btn_nuevo_log = ctk.CTkButton(
+            frame_botones_log, 
+            text="Nuevo Log", 
+            width=65, 
+            height=22, 
+            fg_color="transparent", 
+            border_width=1, 
+            border_color="gray50", 
+            hover_color=("gray80", "gray25"),
+            font=ctk.CTkFont(size=11),
+            command=self.comando_nuevo_log
+        )
+        self.btn_nuevo_log.pack(side="left", padx=2)
+        ToolTip(self.btn_nuevo_log, "Finaliza el log actual y genera uno nuevo para el siguiente ensayo")
+
+        self.btn_abrir_logs = ctk.CTkButton(
+            frame_botones_log, 
+            text="Ver Logs", 
+            width=65,    
+            height=22, 
+            fg_color="transparent", 
+            border_width=1, 
+            border_color="gray50", 
+            hover_color=("gray80", "gray25"),
+            font=ctk.CTkFont(size=11),
+            command=self.abrir_carpeta_logs
+        )
+        self.btn_abrir_logs.pack(side="left", padx=2) 
+        ToolTip(self.btn_abrir_logs, "Abre la carpeta local de registros .txt")
+
         self.label_movimientos = ctk.CTkLabel(frame_progreso, text="Movs: 0", font=ctk.CTkFont(size=14, weight="bold"))
-        self.label_movimientos.grid(row=1, column=0, sticky="w", padx=20, pady=(0, 15))
+        self.label_movimientos.grid(row=1, column=0, sticky="w", padx=20, pady=(5, 15))
+
         self.label_reloj = ctk.CTkLabel(frame_progreso, text="⌛ 00:00:00", font=ctk.CTkFont(family="Consolas", size=15, weight="bold"), text_color="#1f6aa5")
-        self.label_reloj.grid(row=1, column=1, sticky="e", padx=20, pady=(0, 15))
+        self.label_reloj.grid(row=1, column=1, sticky="e", padx=20, pady=(5, 15))
 
         # --- PANEL CENTRAL: PARÁMETROS MOTOR, KVALS Y GRÁFICA ---
         frame_motor_master = ctk.CTkFrame(self.root, fg_color="transparent")
