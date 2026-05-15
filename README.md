@@ -9,8 +9,9 @@ Este proyecto implementa un sistema de control de alta precisión para una mesa 
   - `NRT_Task.c`: Tarea principal de FreeRTOS, bucle de control USB CDC, parsing y movimiento.
   - `gpio.c`: Inicialización segura de pines y periféricos (NSS, LEDs).
 - `/GUI_Motor`: Entorno de desarrollo de la interfaz gráfica de control desde el PC.
+  - `ECHO_Bootloader.py`: Punto de entrada principal de la aplicación. Gestiona el Splash Screen y la carga asíncrona de módulos pesados.
   - `interfaz_motor.py`: Código fuente en Python con hilos paralelos de transmisión y logging.
-  - Recursos gráficos (`us.png`, `icofinal.ico`, etc.).
+  - `/assets/img`: Recursos gráficos (`us.png`, `icofinal.ico`, etc.).
 
 > **📥 Descarga del Software:** El ejecutable precompilado de la interfaz para Windows (`E.C.H.O. Platform.exe`) se encuentra disponible en la sección **[Releases](https://github.com/manuikerr/NAS_Rotatory_Table/releases)** de este repositorio dentro de un archivo empaquetado junto a sus dependencias.
 
@@ -52,10 +53,11 @@ Se ha diseñado un canal de comunicación síncrono entre la placa y el ordenado
     * Si el parseo es correcto, el STM32 devuelve el token **`Angulo recibido`**, permitiendo reflejar el éxito en la telemetría del PC.
     * Si la trama falla, la placa devuelve el token **`Parseo erroneo`**, alertando a la interfaz de Python para notificar la incidencia y denegar acciones inseguras en el hardware.
 
-## 🖥️ 3. E.C.H.O. Platform - Interfaz de Control del motor (`interfaz_mesa.py`)
-Sustitución completa del script de automatización antiguo por un entorno gráfico e interactivo multihilo bajo el ecosistema **E.C.H.O. Platform**.
+## 🖥️ 3. E.C.H.O. Platform - Bootloader e Interfaz de Control (`ECHO_Bootloader.py` & `interfaz_mesa.py`)
+Sustitución completa del script de automatización antiguo por un ecosistema de software profesional, interactivo y multihilo, diseñado para una ejecución robusta en Windows.
 
-* **UI para Script Python (GUI_Motor):** Panel visual desarrollado con `tkinter` y empaquetado en un ejecutable independiente de Windows. Implementa redirección completa de la salida estándar `sys.stdout` a un widget de texto en tiempo real (`ConsoleRedirector`) actuando como consola de telemetría integrada.
-* **Control Multihilo Síncrono:** La rutina de entrenamiento se ejecuta en un hilo secundario independiente (`threading.Thread`) con opción de parada segura (`self.entrenando = False`), evitando la congelación de la interfaz gráfica durante los retardos de envío y las lecturas por puerto serie.
-* **Persistencia de Datos (Smart Config):** Carga y volcado automático de parámetros configurados (puertos COM detectados dinámicamente, Baud Rate, tiempos de espera, banderas de aleatoriedad y valores fijos) mediante un archivo local `config.json` al abrir y cerrar la aplicación.
+* **Arquitectura de Arranque (Bootloader):** Punto de entrada gestionado por `ECHO_Bootloader.py`. Implementa una *Splash Screen* animada que gestiona la carga asíncrona de dependencias críticas en segundo plano. Esto garantiza una respuesta visual instantánea y prepara el entorno para la ejecución de la interfaz principal sin bloqueos de memoria.
+* **Interfaz de Control (interfaz_mesa.py):** Panel visual avanzado desarrollado con componentes `CustomTkinter` para soporte HiDPI. Implementa la redirección completa de la salida estándar `sys.stdout` a un widget de texto en tiempo real (`ConsoleRedirector`), actuando como consola de telemetría integrada con funciones de autoscroll inteligente.
+* **Control Multihilo Síncrono:** La lógica de entrenamiento y comunicación serie se ejecuta en un hilo secundario independiente (`threading.Thread`) respecto a la GUI. Esto permite la ejecución de rutinas de larga duración y el procesamiento de comandos del STM32 sin congelar el renderizado de los LEDs de estado o las gráficas dinámicas.
+* **Persistencia de Datos (Smart Config):** Sistema de carga y volcado automatizado de parámetros (puertos COM, Baud Rate, tiempos de ensayo y preferencias de tema) mediante el archivo `config.json`. Esto asegura que la plataforma mantenga la memoria de configuración entre diferentes sesiones de trabajo.
 * **Sistema de Telemetría (Logging):** Registro automatizado en archivos de texto dentro de una carpeta local `/logs`, guardando marcas de tiempo de Windows, estados de respuesta devueltos por el firmware del STM32 y los parámetros exactos calculados (de forma aleatoria o fija) para la posterior auditoría de los ensayos de ecolocalización.

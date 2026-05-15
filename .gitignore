@@ -3,6 +3,7 @@ Debug/
 Release/
 bin/
 obj/
+__pycache__/
 
 # Archivos temporales del IDE
 .settings/
