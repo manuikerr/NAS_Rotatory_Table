@@ -275,7 +275,7 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
 
-  // Copiamos el mensaje del PC a nuestro cajón global y levantamos e
+  // Copiamos el mensaje del PC a nuestro cajón global y levantamos el flag
     if(*Len < 64) {
         memset(usb_rx_buffer, 0, 64);
         memcpy(usb_rx_buffer, Buf, *Len);

@@ -158,6 +158,9 @@ void NRT_Task(void * parg){
             break;
 
 		case NRT_STATE_UPDATE:
+
+			printf("Actualizando K_Values...");
+
 			// 1. Aplicamos K_Values
 			dSPIN_Set_Param(dSPIN_KVAL_HOLD, Kval_Perc_to_Par(k_hold));
 			dSPIN_Set_Param(dSPIN_KVAL_RUN,  Kval_Perc_to_Par(k_run));
@@ -174,6 +177,9 @@ void NRT_Task(void * parg){
 			break;
 
 		case NRT_STATE_HOMING:
+
+			printf("Comenzando rutina de Homing...");
+
 			// 1. hacemos rutina de homing
 			homing_routine();
 
@@ -188,7 +194,7 @@ void NRT_Task(void * parg){
 
 		case NRT_STATE_MOVING:
 			// 1. Imprime en la consola interna del STM32
-			printf("Angulo: %.2f\r\n", angulo);
+			printf("Angulo recibido: %.2f\r\n", angulo);
 
 			// 2. Actualizamos los parámetros del motor "al vuelo"
 			dSPIN_Set_Param(dSPIN_MAX_SPEED, MaxSpd_Steps_to_Par(vel));
@@ -199,7 +205,7 @@ void NRT_Task(void * parg){
 			move_to_ang(angulo);
 
 			// 4. Avisamos a Python de que ha ido bien
-			snprintf(tx_buffer, sizeof(tx_buffer), "Angulo recibido\n");
+			snprintf(tx_buffer, sizeof(tx_buffer), "Trama recibida\n");
 			CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
 
 			// 5. Ponemos flag USB a 0 y actualizamos estado a IDLE

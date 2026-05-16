@@ -28,12 +28,17 @@ GRUPO 3: RUTINAS CSV
 GRUPO 4: ENTRENAMIENTO Y MOVIMIENTO
 =========================================================
 // Generado al inicio de rutina_entrenamiento
-[15:34:14.997] [▶] Ciclo de entrenamiento iniciado (Duración: 0.5h | Pausa: 5.0s)
+[▶] Ciclo de entrenamiento iniciado (Duración: 0.5h | Pausa: 5.0s)
 
-// Generado por enviar_comando_dinamico (Muestra timestamps de 4 dígitos)
-[15:34:15.002] [PC] Ang:  45.0º | V: 500 | A:1000 | D:1000 | -> [STM32]: Angulo recibido
-[15:34:20.045] [PC] Ang:-120.5º | V: 650 | A:2100 | D:2100 | -> [STM32]: Angulo recibido
-[15:34:25.091] [PC] Ang:   0.0º | V: 300 | A: 800 | D: 800 | -> [STM32]: TIMEOUT
+// Generado por enviar_comando_dinamico (Estructura Síncrona v2.0)
+[15:34:15.002] [PC] Ang: 45.0º | V: 500 | A:1000 | D:1000
+[15:34:16.240] [✔] [STM32]: Angulo recibido
+
+[15:34:20.045] [PC] Ang: -120.5º | V: 650 | A:2100 | D:2100
+[15:34:23.110] [✔] [STM32]: Angulo recibido
+
+[15:34:25.091] [PC] Ang: 0.0º | V: 300 | A: 800 | D: 800
+[15:34:30.091] [✔] [STM32]: TIMEOUT
 
 =========================================================
 GRUPO 5: PARADAS Y CIERRE

@@ -154,7 +154,7 @@ class MotorControl:
     """Gestiona la comunicación Serial con el STM32, hilos de ejecución y data logging."""
     
     SIMULADOR_ID = "MODO_TEST"
-    MSG_ANGULO_OK = "Angulo recibido"
+    MSG_TRAMA_OK = "Trama recibida"
     MSG_TIMEOUT = "TIMEOUT"
 
     def __init__(self, cb_conn, cb_motor, cb_progreso, cb_grafica):
@@ -320,15 +320,16 @@ class MotorControl:
     def _enviar_comando_dinamico(self, v, a, d, g):
         """Formatea y escribe la trama completa V-A-D-G hacia el microcontrolador STM32."""
         cmd = f"V:{v:.1f},A:{a:.1f},D:{d:.1f},G:{g:.2f}\n"
-        
+        print(f"[{obtener_timestamp()}] [PC] Ang:{g:>6.1f}º | V:{v:>4.0f} | A:{a:>4.0f} | D:{d:>4.0f}")
+
         if self.conexion == self.SIMULADOR_ID:
             time.sleep(0.05)
-            res = self.MSG_ANGULO_OK
+            res = self.MSG_TRAMA_OK
         else:
             self.conexion.write(cmd.encode('utf-8'))
             res = self.conexion.readline().decode('utf-8').strip() or self.MSG_TIMEOUT
             
-        print(f"[{obtener_timestamp()}] [PC] Ang:{g:>6.1f}º | V:{v:>4.0f} | A:{a:>4.0f} | D:{d:>4.0f} | -> [STM32]: {res}")
+        print(f"[{obtener_timestamp()}] [✔] [STM32]: {res}")
 
     def detener_entrenamiento(self):
         """Cambia el estado lógico deteniendo de manera segura el hilo de envíos."""
