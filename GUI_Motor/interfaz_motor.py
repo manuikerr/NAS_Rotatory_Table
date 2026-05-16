@@ -33,10 +33,7 @@ ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 
 # =============================================================================
-# CLASE TOOLTIP (Hover Info)
-# =============================================================================
-# =============================================================================
-# CLASE TOOLTIP (Hover Info con Detección de Bordes)
+# CLASE TOOLTIP
 # =============================================================================
 class ToolTip:
     """Crea un pequeño globo de información al pasar el ratón sobre un widget."""
@@ -363,11 +360,9 @@ class MotorGUI:
         self.root.geometry("1150x800")
         self.root.minsize(1050, 750)
         
-        # La ruta base para config.json sigue siendo la raíz del script
         self.ruta_base = RUTA_BASE 
         self.archivo_config = os.path.join(self.ruta_base, "config.json")    
 
-# El icono ahora se busca en assets/img/
         ruta_icono = obtener_ruta_recurso("icofinal.ico")
         if os.path.exists(ruta_icono):
             self.root.after(200, lambda: self.root.iconbitmap(ruta_icono))
@@ -446,6 +441,32 @@ class MotorGUI:
         """Acción del botón para forzar un nuevo archivo de registro."""
         self.motor.reset_log()
 
+    def refrescar_puertos_en_caliente(self):
+        """
+        Intercepta el clic del usuario para realizar un barrido de hardware 
+        y actualizar la lista desplegable antes de mostrar las opciones.
+        """
+        try:
+            puertos_detectados = self.motor.obtener_puertos()
+            seleccion_actual = self.combo_puertos.get()
+            
+            if not puertos_detectados:
+                mensaje_ux = ["Select COM"] 
+                self.combo_puertos.configure(values=mensaje_ux)
+                self.combo_puertos.set(mensaje_ux[0])
+                return
+
+            self.combo_puertos.configure(values=puertos_detectados)
+
+            # Autoseleccionamos COM
+            if seleccion_actual == "Select COM" or not (seleccion_actual in puertos_detectados):
+                self.combo_puertos.set(puertos_detectados[0])
+            else:
+                self.combo_puertos.set(seleccion_actual)
+                
+        except Exception as e:
+            print(f"[!] Error al refrescar el mapeo de puertos: {e}")
+
     def crear_interfaz(self):
         """Renderizado estructural masivo del dashboard principal con distancias uniformes."""
         self.root.grid_columnconfigure(0, weight=1)
@@ -504,8 +525,12 @@ class MotorGUI:
         ctk.CTkLabel(frame_config, text="Configuración del Sistema", font=ctk.CTkFont(size=14, weight="bold")).grid(row=0, column=0, columnspan=9, sticky="w", padx=15, pady=(10, 10))
 
         ctk.CTkLabel(frame_config, text="Puerto:").grid(row=1, column=0, sticky="w", padx=(15, 5), pady=(0, 15))
-        self.combo_puertos = ctk.CTkComboBox(frame_config, values=self.motor.obtener_puertos(), width=130)
+        self.combo_puertos = ctk.CTkComboBox(frame_config, values=self.motor.obtener_puertos(), width=130, state="readonly")
         self.combo_puertos.grid(row=1, column=1, padx=5, pady=(0, 15))
+
+        self.combo_puertos.bind("<Button-1>", lambda event: self.refrescar_puertos_en_caliente())
+        if hasattr(self.combo_puertos, "_canvas"):
+            self.combo_puertos._canvas.bind("<Button-1>", lambda event: self.refrescar_puertos_en_caliente())
         
         ctk.CTkLabel(frame_config, text="Baud:").grid(row=1, column=2, padx=(10, 5), pady=(0, 15))
         self.entry_baud = ctk.CTkEntry(frame_config, width=80)
@@ -643,7 +668,7 @@ class MotorGUI:
         self.label_csv.pack(side=tk.LEFT, padx=10)
 
         # -------------------------------------------------------------
-        # NUEVO BLOQUE: Estado y Comandos integrados debajo de los parámetros
+        # Estado y Comandos
         # -------------------------------------------------------------
         ctk.CTkFrame(frame_motor, height=2, fg_color=("gray80", "gray30")).grid(row=8, column=0, columnspan=3, sticky="ew", padx=15, pady=(10, 10))
 
@@ -944,8 +969,10 @@ class MotorGUI:
             self.combo_puertos.configure(state="disabled")
             print("[INFO] Modo de simulación activado.")
         else:
-            self.combo_puertos.configure(state="normal")
-            self.combo_puertos.set("")
+            self.combo_puertos.configure(state="readonly")
+            
+            self.refrescar_puertos_en_caliente()
+            
             if self.motor.conexion == MotorControl.SIMULADOR_ID:
                 self.motor.conexion = None
                 self.actualizar_led_conexion(False)
