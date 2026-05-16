@@ -11,20 +11,14 @@ else:
     RUTA_BASE = os.path.dirname(os.path.abspath(__file__))
 
 def obtener_ruta_recurso(nombre_archivo):
-    """
-    Construye la ruta absoluta para recursos estáticos.
-    Busca los archivos dentro de la subcarpeta centralizada assets/img.
-    """
+    """Construye la ruta absoluta para recursos estáticos dentro de assets/img."""
     return os.path.join(RUTA_BASE, "assets", "img", nombre_archivo)
 
 class ECHOSplash:
     def __init__(self, root):
-        """
-        Configura la interfaz del Splash Screen: ventana sin bordes,
-        centrado en pantalla y carga de elementos visuales iniciales.
-        """
+        """Configura el Splash Screen usando un Canvas para garantizar transparencias alfa reales."""
         self.root = root
-        self.cargando = True # Bandera de control para procesos asíncronos
+        self.cargando = True 
         
         self.root.overrideredirect(True) 
         width, height = 600, 600
@@ -38,13 +32,15 @@ class ECHOSplash:
         fondo_gris = "#d3d3d3" 
         self.root.configure(bg=fondo_gris)
 
+        self.canvas = tk.Canvas(self.root, width=width, height=height, bg=fondo_gris, highlightthickness=0, borderwidth=0)
+        self.canvas.pack(fill="both", expand=True)
+
         try:
             ruta_fondo = obtener_ruta_recurso("pantalla_carga.png")
-            img_bg = Image.open(ruta_fondo)
+            img_bg = Image.open(ruta_fondo).convert("RGBA")
             img_bg = img_bg.resize((width, height), Image.LANCZOS)
             self.img_fondo = ImageTk.PhotoImage(img_bg)
-            self.lbl_fondo = tk.Label(self.root, image=self.img_fondo, borderwidth=0)
-            self.lbl_fondo.place(x=0, y=0)
+            self.canvas.create_image(0, 0, image=self.img_fondo, anchor="nw")
         except Exception:
             pass
 
@@ -52,15 +48,15 @@ class ECHOSplash:
             ruta_engranaje = obtener_ruta_recurso("engranaje.png")
             self.img_engranaje_original = Image.open(ruta_engranaje).convert("RGBA")
             self.img_engranaje_original = self.img_engranaje_original.resize((40, 40), Image.LANCZOS)
-            self.tk_engranaje = ImageTk.PhotoImage(self.img_engranaje_original)
-            self.lbl_engranaje = tk.Label(self.root, image=self.tk_engranaje, bg=fondo_gris, borderwidth=0)
-            self.lbl_engranaje.place(x=width//2 - 20, y=height - 120) 
+            
+            self.engranaje_x = width // 2
+            self.engranaje_y = height - 100
+            
+            self.canvas_engranaje_id = self.canvas.create_image(self.engranaje_x, self.engranaje_y, anchor="center")
         except Exception:
             self.img_engranaje_original = None
 
-        # Etiqueta de versión del software
-        self.lbl_version = tk.Label(self.root, text="v2.0.0", bg=fondo_gris, fg="#666666", font=("Arial", 12, "bold"))
-        self.lbl_version.place(x=20, y=height - 40)
+        self.canvas.create_text(20, height - 30, text="v2.0.0", fill="#666666", font=("Arial", 12, "bold"), anchor="w")
         
         self.angulo_engranaje = 0
         self.animacion_id = None
@@ -69,19 +65,19 @@ class ECHOSplash:
         self.iniciar_carga_en_segundo_plano()
 
     def animar_carga(self):
-        """
-        Gestiona la rotación del engranaje mediante recursión controlada por .after().
-        Aplica rotación a la imagen original para evitar la degradación por rotaciones sucesivas.
-        """
+        """Gestiona la rotación matemática del engranaje redibujándolo sobre el Canvas."""
         if not self.cargando:
             return
 
         if hasattr(self, 'img_engranaje_original') and self.img_engranaje_original:
             try:
                 self.angulo_engranaje = (self.angulo_engranaje - 5) % 360
-                img_rotada = self.img_engranaje_original.rotate(self.angulo_engranaje, resample=Image.BICUBIC)
+                
+                img_rotada = self.img_engranaje_original.rotate(self.angulo_engranaje, resample=Image.BICUBIC, expand=False, fillcolor=(0, 0, 0, 0))
+                
                 self.tk_engranaje = ImageTk.PhotoImage(img_rotada)
-                self.lbl_engranaje.config(image=self.tk_engranaje)
+                self.canvas.itemconfig(self.canvas_engranaje_id, image=self.tk_engranaje)
+                
             except Exception:
                 pass
         
@@ -89,29 +85,20 @@ class ECHOSplash:
             self.animacion_id = self.root.after(30, self.animar_carga)
 
     def iniciar_carga_en_segundo_plano(self):
-        """
-        Lanza un hilo dedicado (Daemon) para importar las librerías pesadas sin
-        bloquear el refresco visual de la ventana principal (Main Thread).
-        """
+        """Lanza un hilo dedicado para importar las librerías pesadas sin bloquear el Main Thread."""
         hilo_carga = threading.Thread(target=self.importar_dependencias_pesadas, daemon=True)
         hilo_carga.start()
         self.comprobar_estado_carga(hilo_carga)
 
     def importar_dependencias_pesadas(self):
-        """
-        Carga en la memoria RAM los módulos críticos del sistema.
-        Al ser imports globales, ya estarán disponibles para interfaz_motor.
-        """
-        global interfaz_motor, ctk
+        """Carga en la memoria RAM los módulos críticos del sistema."""
+        global interfaz_motor
         import customtkinter as ctk
         import interfaz_motor 
         import matplotlib.pyplot as plt 
 
     def comprobar_estado_carga(self, hilo):
-        """
-        Monitorea el estado del hilo de carga. Cuando finaliza, detiene la animación
-        y destruye el Splash para dar paso a la aplicación principal.
-        """
+        """Monitorea el estado del hilo de carga para destruir el Splash al finalizar."""
         if hilo.is_alive():
             self.root.after(100, lambda: self.comprobar_estado_carga(hilo))
         else:
@@ -124,17 +111,14 @@ class ECHOSplash:
 if __name__ == "__main__":
     import ctypes
     try:
-        # Configuración de Windows para que la GUI sea nítida en pantallas HiDPI
         ctypes.windll.shcore.SetProcessDpiAwareness(1)
     except Exception:
         pass
 
-    # FASE 1: Ejecución del Splash Screen
     root_splash = tk.Tk()
     app_splash = ECHOSplash(root_splash)
     root_splash.mainloop() 
     
-    # FASE 2: Una vez cerrado el Splash, se inicia la Interfaz Principal
     import customtkinter as ctk
     from interfaz_motor import MotorGUI 
     
