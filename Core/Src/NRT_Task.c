@@ -190,17 +190,17 @@ void NRT_Task(void * parg){
 			// 1. Imprime en la consola interna del STM32
 			printf("Angulo: %.2f\r\n", angulo);
 
-			// 2. Avisamos a Python de que ha ido bien
-			snprintf(tx_buffer, sizeof(tx_buffer), "Angulo recibido\n");
-			CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
-
-			// 3. Actualizamos los parámetros del motor "al vuelo"
+			// 2. Actualizamos los parámetros del motor "al vuelo"
 			dSPIN_Set_Param(dSPIN_MAX_SPEED, MaxSpd_Steps_to_Par(vel));
 			dSPIN_Set_Param(dSPIN_ACC, AccDec_Steps_to_Par(acc));
 			dSPIN_Set_Param(dSPIN_DEC, AccDec_Steps_to_Par(dec));
 
-			// 4. Movemos la plataforma
+			// 3. Movemos la plataforma
 			move_to_ang(angulo);
+
+			// 4. Avisamos a Python de que ha ido bien
+			snprintf(tx_buffer, sizeof(tx_buffer), "Angulo recibido\n");
+			CDC_Transmit_FS((uint8_t*)tx_buffer, strlen(tx_buffer));
 
 			// 5. Ponemos flag USB a 0 y actualizamos estado a IDLE
 			usb_rx_flag = 0;
