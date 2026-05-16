@@ -13,9 +13,11 @@ Este proyecto implementa un sistema de control de alta precisión para una mesa 
   - `interfaz_motor.py`: Código fuente en Python con hilos paralelos de transmisión y logging.
   - `/assets/img`: Recursos gráficos (`us.png`, `icofinal.ico`, etc.).
 
-> **📥 Descarga del Software:** El ejecutable precompilado de la interfaz para Windows (`E.C.H.O. Platform.exe`) se encuentra disponible en la sección **[Releases](https://github.com/manuikerr/NAS_Rotatory_Table/releases)** de este repositorio dentro de un archivo empaquetado junto a sus dependencias.
+### 📦 Descarga del Software
+[![GitHub pre-release (latest by date)](https://img.shields.io/github/v/release/manuikerr/NAS_Rotatory_Table?include_prereleases&color=2b6cb0&label=VER%20RELEASES%20&style=for-the-badge&logo=stmicroelectronics&logoColor=white)](https://github.com/manuikerr/NAS_Rotatory_Table/releases)
 
----
+[![Ver Versiones Disponibles](https://img.shields.io/badge/VER%20VERSIONES%20-2b6cb0?style=for-the-badge&logo=stmicroelectronics&logoColor=white)](https://github.com/manuikerr/NAS_Rotatory_Table/tags)
+
 
 # 📝 Registro de Modificaciones y Evolución del Proyecto
 
@@ -53,7 +55,7 @@ Se ha diseñado un canal de comunicación síncrono entre la placa y el ordenado
     * Si el parseo es correcto, el STM32 devuelve el token **`Angulo recibido`**, permitiendo reflejar el éxito en la telemetría del PC.
     * Si la trama falla, la placa devuelve el token **`Parseo erroneo`**, alertando a la interfaz de Python para notificar la incidencia y denegar acciones inseguras en el hardware.
 
-## 🖥️ 3. E.C.H.O. Platform - Bootloader e Interfaz de Control (`ECHO_Bootloader.py` & `interfaz_mesa.py`)
+## 🖥️ 3. E.C.H.O Platform - Bootloader e Interfaz de Control (`ECHO_Bootloader.py` & `interfaz_mesa.py`)
 Sustitución completa del script de automatización antiguo por un ecosistema de software profesional, interactivo y multihilo, diseñado para una ejecución robusta en Windows.
 
 * **Arquitectura de Arranque (Bootloader):** Punto de entrada gestionado por `ECHO_Bootloader.py`. Implementa una *Splash Screen* animada que gestiona la carga asíncrona de dependencias críticas en segundo plano. Esto garantiza una respuesta visual instantánea y prepara el entorno para la ejecución de la interfaz principal sin bloqueos de memoria.
